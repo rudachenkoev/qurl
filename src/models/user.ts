@@ -1,5 +1,5 @@
 import { Schema, model } from 'mongoose'
-import {authentication} from '@helpers/auth'
+import { authentication } from '@helpers/auth'
 enum Languages {
   English = 'en',
   German = 'de',
