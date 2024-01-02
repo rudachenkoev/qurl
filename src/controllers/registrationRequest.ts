@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
 import fs from 'fs'
 import path from 'path'
-import mongoose from 'mongoose'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
 import { getUserByEmail } from '@models/user'
@@ -11,6 +10,7 @@ import { createUserProfile } from '@controllers/user'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
 import { authentication } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
+import { dropCollection } from '@config/db'
 
 // VERIFICATION REQUESTS
 const validateRegistrationRequest = (values: Record<any, any>) => {
@@ -59,9 +59,8 @@ export const sendRegistrationVerificationRequest = async (req: Request, res: Res
   }
 }
 
-const removeAllRegistrationRequests = () => mongoose.connection.db.dropCollection('registrationrequests')
 // Clear registration requests collection evert 15 minutes
-schedule('*/15 * * * *', () => removeAllRegistrationRequests())
+if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('registrationrequests'))
 
 // VERIFICATION REQUEST CONFIRMATION
 const validateRegistrationRequestVerification = (values: Record<any, any>) => {

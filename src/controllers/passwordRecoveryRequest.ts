@@ -1,7 +1,6 @@
 import { Request, Response } from 'express'
 import fs from 'fs'
 import path from 'path'
-import mongoose from 'mongoose'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
 import { getUserByEmail } from '@models/user'
@@ -13,6 +12,7 @@ import {
   getPasswordRecoveryRequestByEmail,
   getPasswordRecoveryRequestById
 } from '@models/passwordRecoveryRequest'
+import { dropCollection } from '@config/db'
 
 const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
   const schema = Joi.object({
@@ -60,9 +60,8 @@ export const sendPasswordRecoveryRequest = async (req: Request, res: Response) =
   }
 }
 
-const removeAllPasswordRecoveryRequests = () => mongoose.connection.db.dropCollection('passwordrecoveryrequests')
 // Clear requests collection evert 15 minutes
-schedule('*/15 * * * *', () => removeAllPasswordRecoveryRequests())
+if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('passwordrecoveryrequests'))
 
 const validatePasswordRecoveryRequestVerification = (values: Record<any, any>) => {
   const schema = Joi.object({

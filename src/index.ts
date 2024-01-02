@@ -4,7 +4,7 @@ import http from 'http'
 import { json } from 'body-parser'
 import feedBackRoutes from '@routes/feedback'
 import authRoutes from '@routes/auth'
-import { setupDatabaseConnection } from './config/db'
+import { setupDatabaseConnection } from '@config/db'
 
 const app = express()
 
