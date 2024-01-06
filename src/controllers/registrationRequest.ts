@@ -8,7 +8,7 @@ import { createRegistrationRequest, deleteRegistrationRequestById, getRegistrati
   getRegistrationRequestById } from '@models/registrationRequest'
 import { createUserProfile } from '@controllers/user'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
-import { authentication } from '@helpers/auth'
+import { authentication, generateAccessToken } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
 import { dropCollection } from '@config/db'
 
@@ -24,6 +24,7 @@ const sendVerificationEmail = async (email: string, requestId: string) => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const replacements: IReplacements = {
     date: new Date().toLocaleString('en', { timeZone, hour12: false }),
+    link: `${process.env.FRONT_URL}registration/confirmation/?requestId=${requestId}`,
     requestId
   }
   const mailDetails = {
@@ -67,7 +68,7 @@ const validateRegistrationRequestVerification = (values: Record<any, any>) => {
   const schema = Joi.object({
     requestId: Joi.required(),
     password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber),
-    passwordConfirm: Joi.string().required().equal(Joi.ref('password'))
+    passwordConfirmation: Joi.string().required().equal(Joi.ref('password'))
   })
   return schema.validate(values)
 }
@@ -87,12 +88,13 @@ export const registrationRequestVerification = async (req: Request, res: Respons
     const body = {
       email: request.email,
       authentication: {
-        password: authentication(password)
+        password: authentication(password),
+        sessionToken: generateAccessToken(request.email)
       }
     }
-    const user = await createUserProfile(body)
+    await createUserProfile(body)
     await deleteRegistrationRequestById(requestId) // Clear user registration request
-    return res.status(201).json(user)
+    return res.status(201).json({ bearer: body.authentication.sessionToken })
   } catch (error) {
     res.status(400).send(error)
   }

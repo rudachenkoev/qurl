@@ -7,7 +7,8 @@ const validateUser = (values: Record<any, any>) => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     authentication: {
-      password: Joi.string().required()
+      password: Joi.string().required(),
+      sessionToken: Joi.string().optional()
     }
   })
   return schema.validate(values)

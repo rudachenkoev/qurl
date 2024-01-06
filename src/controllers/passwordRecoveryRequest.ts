@@ -67,7 +67,7 @@ const validatePasswordRecoveryRequestVerification = (values: Record<any, any>) =
   const schema = Joi.object({
     requestId: Joi.required(),
     password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber),
-    passwordConfirm: Joi.string().required().equal(Joi.ref('password'))
+    passwordConfirmation: Joi.string().required().equal(Joi.ref('password'))
   })
   return schema.validate(values)
 }
