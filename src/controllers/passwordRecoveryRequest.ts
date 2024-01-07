@@ -5,13 +5,10 @@ import { schedule } from 'node-cron'
 import Joi from 'joi'
 import { getUserByEmail } from '@models/user'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
-import { authentication } from '@helpers/auth'
+import { authentication, generateAccessToken } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
-import {
-  createPasswordRecoveryRequest, deletePasswordRecoveryRequestById,
-  getPasswordRecoveryRequestByEmail,
-  getPasswordRecoveryRequestById
-} from '@models/passwordRecoveryRequest'
+import { createPasswordRecoveryRequest, deletePasswordRecoveryRequestById, getPasswordRecoveryRequestByEmail,
+  getPasswordRecoveryRequestById } from '@models/passwordRecoveryRequest'
 import { dropCollection } from '@config/db'
 
 const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
@@ -25,6 +22,7 @@ const sendPasswordRecoveryMail = async (email: string, requestId: string) => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const replacements: IReplacements = {
     date: new Date().toLocaleString('en', { timeZone, hour12: false }),
+    link: `${process.env.FRONT_URL}password-recovery/confirmation/?requestId=${requestId}`,
     requestId
   }
   const mailDetails = {
@@ -86,9 +84,10 @@ export const passwordRecoveryRequestVerification = async (req: Request, res: Res
     // Get necessary user by email
     const user = await getUserByEmail(request.email)
     user.authentication.password = authentication(password)
+    user.authentication.sessionToken = generateAccessToken(request.email)
     await user.save()
     await deletePasswordRecoveryRequestById(requestId) // Clear request
-    return res.sendStatus(200)
+    return res.status(200).json({ bearer: user.authentication.sessionToken })
   } catch (error) {
     res.status(400).send(error)
   }
