@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
+import axios from 'axios'
 import { getUserByEmail } from '@models/user'
 import { createRegistrationRequest, deleteRegistrationRequestById, getRegistrationRequestByEmail,
   getRegistrationRequestById } from '@models/registrationRequest'
@@ -15,7 +16,8 @@ import { dropCollection } from '@config/db'
 // VERIFICATION REQUESTS
 const validateRegistrationRequest = (values: Record<any, any>) => {
   const schema = Joi.object({
-    email: Joi.string().email().required()
+    email: Joi.string().email().required(),
+    recaptcha: Joi.string().required()
   })
   return schema.validate(values)
 }
@@ -42,6 +44,10 @@ export const sendRegistrationVerificationRequest = async (req: Request, res: Res
       const errors = error.details.map(item => item.message)
       return res.status(400).send(errors)
     }
+    // Check recaptcha validity
+    const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET
+    const recaptchaResponse = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${RECAPTCHA_SECRET}&response=${req.body.recaptcha}`)
+    if (!recaptchaResponse.data.success) return res.status(400).send(recaptchaResponse.data['error-codes'][0])
     // Check already created user with email
     const user = await getUserByEmail(req.body.email)
     if (user) return res.status(400).send('A user with this mail already exists')
