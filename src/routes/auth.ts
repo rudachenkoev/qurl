@@ -1,7 +1,7 @@
 import express from 'express'
-import { registrationRequestVerification, sendRegistrationVerificationRequest } from '@controllers/registrationRequest'
+import { registrationRequestVerification, sendRegistrationVerificationRequest } from '@controllers/auth/registrationRequest'
 import { login } from '@controllers/auth'
-import { passwordRecoveryRequestVerification, sendPasswordRecoveryRequest } from '@controllers/passwordRecoveryRequest'
+import { passwordRecoveryRequestVerification, sendPasswordRecoveryRequest } from '@controllers/auth/passwordRecoveryRequest'
 
 const router = express.Router()
 

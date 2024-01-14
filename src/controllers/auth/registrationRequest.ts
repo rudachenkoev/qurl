@@ -6,7 +6,7 @@ import Joi from 'joi'
 import axios from 'axios'
 import { getUserByEmail } from '@models/user'
 import { createRegistrationRequest, deleteRegistrationRequestById, getRegistrationRequestByEmail,
-  getRegistrationRequestById } from '@models/registrationRequest'
+  getRegistrationRequestById } from '@models/auth/registrationRequest'
 import { createUserProfile } from '@controllers/user'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
 import { authentication, generateAccessToken } from '@helpers/auth'
@@ -22,7 +22,7 @@ const validateRegistrationRequest = (values: Record<any, any>) => {
   return schema.validate(values)
 }
 const sendVerificationEmail = async (email: string, requestId: string) => {
-  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', 'public', 'html', 'RegistrationRequestMail.html'), 'utf-8')
+  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'html', 'RegistrationRequestMail.html'), 'utf-8')
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const replacements: IReplacements = {
     date: new Date().toLocaleString('en', { timeZone, hour12: false }),
@@ -67,7 +67,7 @@ export const sendRegistrationVerificationRequest = async (req: Request, res: Res
 }
 
 // Clear registration requests collection evert 15 minutes
-if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('registrationrequests'))
+if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('auth_registrationrequests'))
 
 // VERIFICATION REQUEST CONFIRMATION
 const validateRegistrationRequestVerification = (values: Record<any, any>) => {

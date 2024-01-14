@@ -8,7 +8,7 @@ import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailServi
 import { authentication, generateAccessToken } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
 import { createPasswordRecoveryRequest, deletePasswordRecoveryRequestById, getPasswordRecoveryRequestByEmail,
-  getPasswordRecoveryRequestById } from '@models/passwordRecoveryRequest'
+  getPasswordRecoveryRequestById } from '@models/auth/passwordRecoveryRequest'
 import { dropCollection } from '@config/db'
 
 const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
@@ -18,7 +18,7 @@ const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
   return schema.validate(values)
 }
 const sendPasswordRecoveryMail = async (email: string, requestId: string) => {
-  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', 'public', 'html', 'PasswordRecoveryRequestMail.html'), 'utf-8')
+  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'html', 'PasswordRecoveryRequestMail.html'), 'utf-8')
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const replacements: IReplacements = {
     date: new Date().toLocaleString('en', { timeZone, hour12: false }),
@@ -59,7 +59,7 @@ export const sendPasswordRecoveryRequest = async (req: Request, res: Response) =
 }
 
 // Clear requests collection evert 15 minutes
-if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('passwordrecoveryrequests'))
+if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('auth_passwordrecoveryrequests'))
 
 const validatePasswordRecoveryRequestVerification = (values: Record<any, any>) => {
   const schema = Joi.object({
