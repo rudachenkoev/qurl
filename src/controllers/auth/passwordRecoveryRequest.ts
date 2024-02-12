@@ -84,7 +84,7 @@ export const passwordRecoveryRequestVerification = async (req: Request, res: Res
     // Get necessary user by email
     const user = await getUserByEmail(request.email)
     user.authentication.password = authentication(password)
-    user.authentication.sessionToken = generateAccessToken(request.email)
+    user.authentication.sessionToken = generateAccessToken(user._id)
     await user.save()
     await deletePasswordRecoveryRequestById(requestId) // Clear request
     return res.status(200).json({ bearer: user.authentication.sessionToken })

@@ -1,5 +1,6 @@
 import { Schema, model } from 'mongoose'
 import { promotionPeriods, tags } from '@/constants/course'
+import { languages } from '@/constants'
 type ICourse = {
 }
 
@@ -18,18 +19,19 @@ const CourseSchema = new Schema({
     ref: 'directories_CourseCategory',
     required: true
   },
-  poster: {
-    type: String,
-    default: ''
-  },
+  // poster: {
+  //   type: String,
+  //   default: ''
+  // },
   timesSold: {
     type: Number,
     default: 0
   },
   tag: {
+    type: String,
     default: null,
     validate: {
-      validator: function(value: string) {
+      validator: function(value: any) {
         if (value) return tags.some(period => period.id === value)
         else return value === null
       },
@@ -42,9 +44,10 @@ const CourseSchema = new Schema({
     required: true
   },
   promotionPeriod: {
+    type: Number,
     default: null,
     validate: {
-      validator: function(value: number) {
+      validator: function(value: any) {
         if (value) return promotionPeriods.some(period => period.id === value)
         else return value === null
       },
@@ -57,7 +60,7 @@ const CourseSchema = new Schema({
   },
   language: {
     type: String,
-    enum: ['en', 'de', 'fr', 'es', 'it'],
+    enum: languages,
     required: true
   },
   author: {

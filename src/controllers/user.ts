@@ -1,6 +1,5 @@
 import Joi from 'joi'
 import { createUser, IUser } from '@models/user'
-import { generateAccessToken } from '@helpers/auth'
 
 
 const validateUser = (values: Record<any, any>) => {
@@ -20,7 +19,6 @@ export const createUserProfile = (body: IUser) => {
     const { error } = validateUser(body)
     if (error) reject(error.details.map(item => item.message))
     // Create new user profile
-    body.authentication.sessionToken = generateAccessToken(body.email)
     const result = await createUser(body)
     resolve(result)
   })
