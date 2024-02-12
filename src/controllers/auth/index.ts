@@ -23,7 +23,7 @@ export const login = async (req: Request, res: Response) => {
     const user = await getUserByCredits(req.body)
     if (!user) return res.status(404).send('No user information was found or the data is incorrect')
     // Authenticate user with new access token
-    user.authentication.sessionToken = generateAccessToken(user.email)
+    user.authentication.sessionToken = generateAccessToken(user._id)
     await user.save()
     res.status(200).json({ bearer: user.authentication.sessionToken })
   } catch (error) {

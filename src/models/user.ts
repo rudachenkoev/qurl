@@ -1,5 +1,6 @@
 import { Schema, model } from 'mongoose'
 import { authentication } from '@helpers/auth'
+import { languages } from '@/constants'
 enum Languages {
   English = 'en',
   German = 'de',
@@ -25,7 +26,7 @@ const UserSchema = new Schema({
   email: { type: String, required: true, unique: true },
   lastName: { type: String, default: '' },
   firstName: { type: String, default: '' },
-  language: { type: String, default: 'en', enum: ['en', 'de', 'fr', 'es', 'it'] },
+  language: { type: String, default: 'en', enum: languages },
   isActive: { type: Boolean, default: true },
   isActivePromotionsAndOffers: { type: Boolean, default: true },
   authentication: {
@@ -35,6 +36,7 @@ const UserSchema = new Schema({
 }, { timestamps: true })
 
 export const UserModel = model('User', UserSchema)
+export const getUserById = (id: string) => UserModel.findById(id)
 export const getUserByEmail = (email: string) => UserModel.findOne({ email })
 export const getUserByCredits = ({ email, password }: { email: string, password: string }) =>
   UserModel.findOne({ email, 'authentication.password': authentication(password) })

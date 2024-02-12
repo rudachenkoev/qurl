@@ -4,7 +4,7 @@ import path from 'path'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
 import axios from 'axios'
-import { getUserByEmail } from '@models/user'
+import { getUserByEmail, getUserById } from '@models/user'
 import { createRegistrationRequest, deleteRegistrationRequestById, getRegistrationRequestByEmail,
   getRegistrationRequestById } from '@models/auth/registrationRequest'
 import { createUserProfile } from '@controllers/user'
@@ -94,13 +94,17 @@ export const registrationRequestVerification = async (req: Request, res: Respons
     const body = {
       email: request.email,
       authentication: {
-        password: authentication(password),
-        sessionToken: generateAccessToken(request.email)
+        password: authentication(password)
       }
     }
-    await createUserProfile(body)
+    const result = await createUserProfile(body)
     await deleteRegistrationRequestById(requestId) // Clear user registration request
-    return res.status(201).json({ bearer: body.authentication.sessionToken })
+    // @ts-ignore
+    const user = await getUserById(result._id)
+    user.authentication.sessionToken = generateAccessToken(user._id)
+    await user.save()
+
+    return res.status(201).json({ bearer: user.authentication.sessionToken })
   } catch (error) {
     res.status(400).send(error)
   }
