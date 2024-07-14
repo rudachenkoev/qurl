@@ -1,91 +1,117 @@
 import { Request, Response } from 'express'
 import fs from 'fs'
 import path from 'path'
-// import { schedule } from 'node-cron'
+import { schedule } from 'node-cron'
 import Joi from 'joi'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
-import { generatePasswordHash, generateAccessToken } from '@helpers/auth'
+import { generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
-// import { dropCollection } from '@config/db'
+import { pool } from '@/db'
+import userQueries from '@/queries/user'
+import passwordRecoveryRequestQueries from '@/queries/passwordRecoveryRequest'
+import { checkRecaptchaValidity } from '@helpers/recaptcha'
 
 const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
   const schema = Joi.object({
-    email: Joi.string().email().required()
+    email: Joi.string().email().required(),
+    recaptcha: Joi.string().required()
   })
   return schema.validate(values)
 }
-const sendPasswordRecoveryMail = async (email: string, requestId: string) => {
-  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'html', 'PasswordRecoveryRequestMail.html'), 'utf-8')
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const replacements: IReplacements = {
-    date: new Date().toLocaleString('en', { timeZone, hour12: false }),
-    link: `${process.env.FRONT_URL}password-recovery/confirmation/?requestId=${requestId}`,
-    requestId
-  }
-  const mailDetails = {
+const sendPasswordRecoveryMail = async (email: string, replacements: IReplacements) => {
+  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'public', 'html', 'PasswordRecoveryRequestMail.html'), 'utf-8')
+  return await sendMail({
     to: email,
-    subject: 'Password recovery request',
+    subject: 'Complete the password recovery process',
     html: replacePlaceholders(MailTemplate, replacements)
+  })
+}
+
+export const createPasswordRecoveryRequest = async (req: Request, res: Response) => {
+  try {
+    // Check validation
+    const { error } = validatePasswordRecoveryRequest(req.body)
+    if (error) {
+      const errors = error.details.map(item => item.message)
+      res.status(400).send(errors)
+      return
+    }
+    const { email, recaptcha } = req.body
+    // Check recaptcha validity
+    const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
+    if (!isValid) {
+      res.status(400).send(recaptchaError)
+      return
+    }
+    // Check already exist password recovery request
+    const getPasswordRecoveryRequestRes =
+      await pool.query(passwordRecoveryRequestQueries.getPasswordRecoveryRequestByEmail, [email])
+    const passwordRecoveryRequest = getPasswordRecoveryRequestRes.rows[0]
+    if (passwordRecoveryRequest) {
+      await sendPasswordRecoveryMail(email, { verification_code: passwordRecoveryRequest.verification_code })
+      res.sendStatus(200)
+      return
+    }
+    // Verify that the user exists in the system
+    const userRes = await pool.query(userQueries.getUserByEmail, [email])
+    if (!userRes.rowCount) {
+      res.status(400).send('No user with this email was found')
+      return
+    }
+    // Create new password recovery request
+    const verificationCode = generateSixDigitCode()
+    await pool.query(passwordRecoveryRequestQueries.createPasswordRecoveryRequest, [email, verificationCode])
+    await sendPasswordRecoveryMail(email, { verification_code: verificationCode })
+    res.sendStatus(201)
+  } catch (error) {
+    res.status(400).send(error)
   }
-  return await sendMail(mailDetails)
-}
-export const sendPasswordRecoveryRequest = async (req: Request, res: Response) => {
-  // try {
-  //   // Check validation
-  //   const { error } = validatePasswordRecoveryRequest(req.body)
-  //   if (error) {
-  //     const errors = error.details.map(item => item.message)
-  //     return res.status(400).send(errors)
-  //   }
-  //   // Check existing email address
-  //   const user = await getUserByEmail(req.body.email)
-  //   if (!user) return res.status(404).send('No user information was found or the data is incorrect')
-  //   // Check already exist request
-  //   const request = await getPasswordRecoveryRequestByEmail(req.body.email)
-  //   if (request) {
-  //     await sendPasswordRecoveryMail(req.body.email, String(request._id))
-  //     return res.sendStatus(200)
-  //   }
-  //   // Create new request
-  //   const result = await createPasswordRecoveryRequest(req.body)
-  //   await sendPasswordRecoveryMail(req.body.email, String(result._id))
-  //   return res.sendStatus(201)
-  // } catch (error) {
-  //   res.status(400).send(error)
-  // }
 }
 
-// Clear requests collection evert 15 minutes
-// if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('auth_passwordrecoveryrequests'))
+// Clear password recovery requests evert 15 minutes
+if (process.env.DEV_MODE !== 'true') {
+  schedule('*/15 * * * *', () => pool.query(passwordRecoveryRequestQueries.truncatePasswordRecoveryRequest))
+}
 
-const validatePasswordRecoveryRequestVerification = (values: Record<any, any>) => {
+const validatePasswordRecoveryRequestConfirmation = (values: Record<any, any>) => {
   const schema = Joi.object({
-    requestId: Joi.required(),
+    email: Joi.string().email().required(),
+    verification_code: Joi.string().length(6).required(),
     password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber),
-    passwordConfirmation: Joi.string().required().equal(Joi.ref('password'))
+    password_confirmation: Joi.string().required().equal(Joi.ref('password'))
   })
   return schema.validate(values)
 }
-export const passwordRecoveryRequestVerification = async (req: Request, res: Response) => {
-  // try {
-  //   // Check validation
-  //   const { error } = validatePasswordRecoveryRequestVerification(req.body)
-  //   if (error) {
-  //     const errors = error.details.map(item => item.message)
-  //     return res.status(400).send(errors)
-  //   }
-  //   // Check request existing
-  //   const { requestId, password } = req.body
-  //   const request = await getPasswordRecoveryRequestById(requestId)
-  //   if (!request) return res.status(400).send('Password recovery request has not been created before')
-  //   // Get necessary user by email
-  //   const user = await getUserByEmail(request.email)
-  //   user.authentication.password = generatePasswordHash(password)
-  //   user.authentication.sessionToken = generateAccessToken(user._id)
-  //   await user.save()
-  //   await deletePasswordRecoveryRequestById(requestId) // Clear request
-  //   return res.status(200).json({ bearer: user.authentication.sessionToken })
-  // } catch (error) {
-  //   res.status(400).send(error)
-  // }
+
+export const confirmPasswordRecoveryRequest = async (req: Request, res: Response) => {
+  try {
+    // Check validation
+    const { error } = validatePasswordRecoveryRequestConfirmation(req.body)
+    if (error) {
+      const errors = error.details.map(item => item.message)
+      res.status(400).send(errors)
+      return
+    }
+
+    const { email, verification_code, password } = req.body
+    // Check password recovery request existing
+    const getPasswordRecoveryRequestRes =
+      await pool.query(passwordRecoveryRequestQueries.getPasswordRecoveryRequestByEmail, [email])
+    const passwordRecoveryRequest = getPasswordRecoveryRequestRes.rows[0]
+    if (!passwordRecoveryRequest) {
+      res.status(400).send('Password recovery request not found')
+      return
+    }
+    if (passwordRecoveryRequest.verification_code !== verification_code) {
+      res.status(400).send('Invalid verification code')
+      return
+    }
+    // Update userprofile password
+    await pool.query(userQueries.updateUserByEmail, [generatePasswordHash(password), passwordRecoveryRequest.email])
+    // Remove password recovery request
+    await pool.query(passwordRecoveryRequestQueries.deletePasswordRecoveryRequestById, [passwordRecoveryRequest.id])
+    res.sendStatus(201)
+  } catch (error) {
+    res.status(400).send(error)
+  }
 }

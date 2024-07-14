@@ -3,7 +3,6 @@ import fs from 'fs'
 import path from 'path'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
-import axios from 'axios'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
 import { generatePasswordHash, generateAccessToken, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
@@ -11,6 +10,7 @@ import { pool } from '@/db'
 import userQueries from '@/queries/user'
 import registrationRequestQueries from '@/queries/registrationRequest'
 import jwtTokenQueries from '@/queries/jwtToken'
+import { checkRecaptchaValidity } from '@helpers/recaptcha'
 
 const validateRegistrationRequest = (values: Record<any, any>) => {
   const schema = Joi.object({
@@ -26,15 +26,6 @@ const sendVerificationEmail = async (email: string, replacements: IReplacements)
     subject: 'Complete the registration process',
     html: replacePlaceholders(MailTemplate, replacements)
   })
-}
-
-const checkRecaptchaValidity = async (value: String) => {
-  const url = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET}&response=${value}`
-  const response = await axios.post(url)
-  return {
-    isValid: response.data.success,
-    error: !response.data.success ? response.data['error-codes'][0] : ''
-  }
 }
 
 export const createRegistrationRequest = async (req: Request, res: Response) => {
