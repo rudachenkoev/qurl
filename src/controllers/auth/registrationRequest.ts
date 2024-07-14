@@ -1,9 +1,7 @@
 import { Request, Response } from 'express'
-import fs from 'fs'
-import path from 'path'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
-import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
+import { sendVerificationCodeMail } from '@helpers/mailService'
 import { generatePasswordHash, generateAccessToken, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
 import { pool } from '@/db'
@@ -19,12 +17,15 @@ const validateRegistrationRequest = (values: Record<any, any>) => {
   })
   return schema.validate(values)
 }
-const sendVerificationEmail = async (email: string, replacements: IReplacements) => {
-  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'public', 'html', 'RegistrationRequestMail.html'), 'utf-8')
-  return await sendMail({
+const sendVerificationEmail = async (email: string, verificationCode: string) => {
+  return sendVerificationCodeMail({
     to: email,
-    subject: 'Complete the registration process',
-    html: replacePlaceholders(MailTemplate, replacements)
+    subject: 'Complete registration process',
+    replacements: {
+      title: 'Complete registration process',
+      text: 'To complete registration process, copy the verification code and paste it into the application. The code will be valid for 15 minutes.',
+      verification_code: verificationCode
+    }
   })
 }
 
@@ -50,7 +51,7 @@ export const createRegistrationRequest = async (req: Request, res: Response) => 
       await pool.query(registrationRequestQueries.getRegistrationRequestByEmail, [email])
     const registrationRequest = getRegistrationRequestRes.rows[0]
     if (registrationRequest) {
-      await sendVerificationEmail(email, { verification_code: registrationRequest.verification_code })
+      await sendVerificationEmail(email, registrationRequest.verification_code)
       res.sendStatus(200)
       return
     }
@@ -63,7 +64,7 @@ export const createRegistrationRequest = async (req: Request, res: Response) => 
     // Create new registration request
     const verificationCode = generateSixDigitCode()
     await pool.query(registrationRequestQueries.createRegistrationRequest, [email, verificationCode])
-    await sendVerificationEmail(email, { verification_code: verificationCode })
+    await sendVerificationEmail(email, verificationCode)
     res.sendStatus(201)
   } catch (error) {
     res.status(400).send(error)

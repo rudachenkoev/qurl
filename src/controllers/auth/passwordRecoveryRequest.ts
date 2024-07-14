@@ -1,9 +1,7 @@
 import { Request, Response } from 'express'
-import fs from 'fs'
-import path from 'path'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
-import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
+import { sendVerificationCodeMail } from '@helpers/mailService'
 import { generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
 import { pool } from '@/db'
@@ -18,12 +16,15 @@ const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
   })
   return schema.validate(values)
 }
-const sendPasswordRecoveryMail = async (email: string, replacements: IReplacements) => {
-  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'public', 'html', 'PasswordRecoveryRequestMail.html'), 'utf-8')
-  return await sendMail({
+const sendPasswordRecoveryMail = async (email: string, verificationCode: string) => {
+  return sendVerificationCodeMail({
     to: email,
-    subject: 'Complete the password recovery process',
-    html: replacePlaceholders(MailTemplate, replacements)
+    subject: 'Complete password recovery process',
+    replacements: {
+      title: 'Complete password recovery process',
+      text: 'To complete password recovery process, copy the verification code and paste it into the application. The code will be valid for 15 minutes.',
+      verification_code: verificationCode
+    }
   })
 }
 
@@ -48,7 +49,7 @@ export const createPasswordRecoveryRequest = async (req: Request, res: Response)
       await pool.query(passwordRecoveryRequestQueries.getPasswordRecoveryRequestByEmail, [email])
     const passwordRecoveryRequest = getPasswordRecoveryRequestRes.rows[0]
     if (passwordRecoveryRequest) {
-      await sendPasswordRecoveryMail(email, { verification_code: passwordRecoveryRequest.verification_code })
+      await sendPasswordRecoveryMail(email, passwordRecoveryRequest.verification_code)
       res.sendStatus(200)
       return
     }
@@ -61,7 +62,7 @@ export const createPasswordRecoveryRequest = async (req: Request, res: Response)
     // Create new password recovery request
     const verificationCode = generateSixDigitCode()
     await pool.query(passwordRecoveryRequestQueries.createPasswordRecoveryRequest, [email, verificationCode])
-    await sendPasswordRecoveryMail(email, { verification_code: verificationCode })
+    await sendPasswordRecoveryMail(email, verificationCode)
     res.sendStatus(201)
   } catch (error) {
     res.status(400).send(error)
