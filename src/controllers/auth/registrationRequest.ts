@@ -4,16 +4,14 @@ import path from 'path'
 import { schedule } from 'node-cron'
 import Joi from 'joi'
 import axios from 'axios'
-import { getUserByEmail, getUserById } from '@models/user'
-import { createRegistrationRequest, deleteRegistrationRequestById, getRegistrationRequestByEmail,
-  getRegistrationRequestById } from '@models/auth/registrationRequest'
-import { createUserProfile } from '@controllers/user'
 import { IReplacements, replacePlaceholders, sendMail } from '@helpers/mailService'
-import { authentication, generateAccessToken } from '@helpers/auth'
+import { generatePasswordHash, generateAccessToken, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
-import { dropCollection } from '@config/db'
+import { pool } from '@/db'
+import userQueries from '@/queries/user'
+import registrationRequestQueries from '@/queries/registrationRequest'
+import jwtTokenQueries from '@/queries/jwtToken'
 
-// VERIFICATION REQUESTS
 const validateRegistrationRequest = (values: Record<any, any>) => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
@@ -21,90 +19,115 @@ const validateRegistrationRequest = (values: Record<any, any>) => {
   })
   return schema.validate(values)
 }
-const sendVerificationEmail = async (email: string, requestId: string) => {
-  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'html', 'RegistrationRequestMail.html'), 'utf-8')
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const replacements: IReplacements = {
-    date: new Date().toLocaleString('en', { timeZone, hour12: false }),
-    link: `${process.env.FRONT_URL}registration/confirmation/?requestId=${requestId}`,
-    requestId
-  }
-  const mailDetails = {
+const sendVerificationEmail = async (email: string, replacements: IReplacements) => {
+  const MailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'public', 'html', 'RegistrationRequestMail.html'), 'utf-8')
+  return await sendMail({
     to: email,
-    subject: 'Finish registration',
+    subject: 'Complete the registration process',
     html: replacePlaceholders(MailTemplate, replacements)
-  }
-  return await sendMail(mailDetails)
+  })
 }
-export const sendRegistrationVerificationRequest = async (req: Request, res: Response) => {
+
+const checkRecaptchaValidity = async (value: String) => {
+  const url = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET}&response=${value}`
+  const response = await axios.post(url)
+  return {
+    isValid: response.data.success,
+    error: !response.data.success ? response.data['error-codes'][0] : ''
+  }
+}
+
+export const createRegistrationRequest = async (req: Request, res: Response) => {
   try {
     // Check validation
     const { error } = validateRegistrationRequest(req.body)
     if (error) {
       const errors = error.details.map(item => item.message)
-      return res.status(400).send(errors)
+      res.status(400).send(errors)
+      return
     }
+
+    const { email, recaptcha } = req.body
     // Check recaptcha validity
-    const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET
-    const recaptchaResponse = await axios.post(`https://www.google.com/recaptcha/api/siteverify?secret=${RECAPTCHA_SECRET}&response=${req.body.recaptcha}`)
-    if (!recaptchaResponse.data.success) return res.status(400).send(recaptchaResponse.data['error-codes'][0])
-    // Check already created user with email
-    const user = await getUserByEmail(req.body.email)
-    if (user) return res.status(400).send('A user with this mail already exists')
+    const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
+    if (!isValid) {
+      res.status(400).send(recaptchaError)
+      return
+    }
     // Check already exist registration request
-    const request = await getRegistrationRequestByEmail(req.body.email)
-    if (request) {
-      await sendVerificationEmail(req.body.email, String(request._id))
-      return res.sendStatus(200)
+    const getRegistrationRequestRes =
+      await pool.query(registrationRequestQueries.getRegistrationRequestByEmail, [email])
+    const registrationRequest = getRegistrationRequestRes.rows[0]
+    if (registrationRequest) {
+      await sendVerificationEmail(email, { verification_code: registrationRequest.verification_code })
+      res.sendStatus(200)
+      return
+    }
+    // Check already created user with email
+    const userRes = await pool.query(userQueries.getUserByEmail, [email])
+    if (userRes.rowCount) {
+      res.status(400).send('A user with this email address already exists')
+      return
     }
     // Create new registration request
-    const result = await createRegistrationRequest(req.body)
-    await sendVerificationEmail(req.body.email, String(result._id))
-    return res.sendStatus(201)
+    const verificationCode = generateSixDigitCode()
+    await pool.query(registrationRequestQueries.createRegistrationRequest, [email, verificationCode])
+    await sendVerificationEmail(email, { verification_code: verificationCode })
+    res.sendStatus(201)
   } catch (error) {
     res.status(400).send(error)
   }
 }
 
-// Clear registration requests collection evert 15 minutes
-if (process.env.DEV_MODE !== 'true') schedule('*/15 * * * *', () => dropCollection('auth_registrationrequests'))
+// Clear registration requests evert 15 minutes
+if (process.env.DEV_MODE !== 'true') {
+  schedule('*/15 * * * *', () => pool.query(registrationRequestQueries.truncateRegistrationRequest))
+}
 
-// VERIFICATION REQUEST CONFIRMATION
-const validateRegistrationRequestVerification = (values: Record<any, any>) => {
+const validateRegistrationRequestConfirmation = (values: Record<any, any>) => {
   const schema = Joi.object({
-    requestId: Joi.required(),
+    email: Joi.string().email().required(),
+    verification_code: Joi.string().length(6).required(),
     password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber),
-    passwordConfirmation: Joi.string().required().equal(Joi.ref('password'))
+    password_confirmation: Joi.string().required().equal(Joi.ref('password'))
   })
   return schema.validate(values)
 }
-export const registrationRequestVerification = async (req: Request, res: Response) => {
+
+export const confirmRegistrationRequest = async (req: Request, res: Response) => {
   try {
     // Check validation
-    const { error } = validateRegistrationRequestVerification(req.body)
+    const { error } = validateRegistrationRequestConfirmation(req.body)
     if (error) {
       const errors = error.details.map(item => item.message)
-      return res.status(400).send(errors)
+      res.status(400).send(errors)
+      return
     }
-    // Check registration request existing
-    const { requestId, password } = req.body
-    const request = await getRegistrationRequestById(requestId)
-    if (!request) return res.status(400).send('Registration request has not been created before')
-    // Create new user profile
-    const body = {
-      email: request.email,
-      authentication: {
-        password: authentication(password)
-      }
-    }
-    const result = await createUserProfile(body)
-    await deleteRegistrationRequestById(requestId) // Clear user registration request
-    // @ts-ignore
-    const user = await getUserById(result._id)
-    user.authentication.sessionToken = generateAccessToken(user._id)
-    await user.save()
 
-    return res.status(201).json({ bearer: user.authentication.sessionToken })
+    const { email, verification_code, password } = req.body
+    // Check registration request existing
+    const getRegistrationRequestRes =
+      await pool.query(registrationRequestQueries.getRegistrationRequestByEmail, [email])
+    const registrationRequest = getRegistrationRequestRes.rows[0]
+    if (!registrationRequest) {
+      res.status(400).send('Registration request not found')
+      return
+    }
+    if (registrationRequest.verification_code !== verification_code) {
+      res.status(400).send('Invalid verification code')
+      return
+    }
+    // Create new user profile
+    const createUserRes = await pool.query(
+      userQueries.createUser, [registrationRequest.email, generatePasswordHash(password)])
+    const user = createUserRes.rows[0]
+    // Remove registration request
+    await pool.query(registrationRequestQueries.deleteRegistrationRequestById, [registrationRequest.id])
+    // Add jwt authorization token
+    const accessToken = generateAccessToken(user.id)
+    await pool.query(jwtTokenQueries.createJwtToken, [user.id, accessToken])
+
+    res.status(201).json({ bearer: accessToken })
   } catch (error) {
     res.status(400).send(error)
   }

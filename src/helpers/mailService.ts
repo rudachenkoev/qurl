@@ -13,7 +13,8 @@ const mailTransporter = createTransport({
 interface IMailDetails {
   to: string,
   subject?: string,
-  text?: string
+  text?: string,
+  html?: string
 }
 export const sendMail = (details: IMailDetails):Promise<any> => {
   const mailDetails = { from: sender, ...details }
