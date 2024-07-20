@@ -6,9 +6,12 @@ const createRegistrationRequest = 'INSERT INTO registration_requests (email, ver
 
 const truncateRegistrationRequest = 'TRUNCATE TABLE registration_requests'
 
+const deleteRegistrationRequestInInterval = "DELETE FROM registration_requests WHERE created_at < NOW() - INTERVAL '15 minutes'"
+
 export default {
   getRegistrationRequestByEmail,
   createRegistrationRequest,
   truncateRegistrationRequest,
-  deleteRegistrationRequestById
+  deleteRegistrationRequestById,
+  deleteRegistrationRequestInInterval
 }

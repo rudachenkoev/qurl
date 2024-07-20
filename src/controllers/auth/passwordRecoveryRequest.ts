@@ -1,15 +1,16 @@
 import { Request, Response } from 'express'
 import { schedule } from 'node-cron'
-import Joi from 'joi'
+import Joi, { ValidationResult  } from 'joi'
 import { sendVerificationCodeMail } from '@helpers/mailService'
-import { generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
+import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
 import { pool } from '@/db'
 import userQueries from '@/queries/user'
 import passwordRecoveryRequestQueries from '@/queries/passwordRecoveryRequest'
+import jwtTokenQueries from '@/queries/jwtToken'
 import { checkRecaptchaValidity } from '@helpers/recaptcha'
 
-const validatePasswordRecoveryRequest = (values: Record<any, any>) => {
+const validatePasswordRecoveryRequest = (values: Record<string, any>): ValidationResult  => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     recaptcha: Joi.string().required()
@@ -71,10 +72,10 @@ export const createPasswordRecoveryRequest = async (req: Request, res: Response)
 
 // Clear password recovery requests evert 15 minutes
 if (process.env.DEV_MODE !== 'true') {
-  schedule('*/15 * * * *', () => pool.query(passwordRecoveryRequestQueries.truncatePasswordRecoveryRequest))
+  schedule('*/15 * * * *', () => pool.query(passwordRecoveryRequestQueries.deletePasswordRecoveryRequestInInterval))
 }
 
-const validatePasswordRecoveryRequestConfirmation = (values: Record<any, any>) => {
+const validatePasswordRecoveryRequestConfirmation = (values: Record<string, any>): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     verification_code: Joi.string().length(6).required(),
@@ -108,10 +109,18 @@ export const confirmPasswordRecoveryRequest = async (req: Request, res: Response
       return
     }
     // Update userprofile password
-    await pool.query(userQueries.updateUserByEmail, [generatePasswordHash(password), passwordRecoveryRequest.email])
+    const updateUserRes = await pool.query(userQueries.updateUserByEmail, [generatePasswordHash(password), passwordRecoveryRequest.email])
+    const user = updateUserRes.rows[0]
     // Remove password recovery request
     await pool.query(passwordRecoveryRequestQueries.deletePasswordRecoveryRequestById, [passwordRecoveryRequest.id])
-    res.sendStatus(201)
+    // Update the current or create a new authorization token
+    const getJwtTokenByUserRes = await pool.query(jwtTokenQueries.getJwtTokenByUser, [user.id])
+    const userToken = getJwtTokenByUserRes.rows[0]
+    const newToken = generateAccessToken(user.id)
+    if (userToken) await pool.query(jwtTokenQueries.updateJwtTokenByUser, [newToken, user.id])
+    else await pool.query(jwtTokenQueries.createJwtToken, [user.id, newToken])
+
+    res.status(201).json({ bearer: newToken })
   } catch (error) {
     res.status(400).send(error)
   }

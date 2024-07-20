@@ -6,9 +6,12 @@ const createPasswordRecoveryRequest = 'INSERT INTO password_recovery_requests (e
 
 const truncatePasswordRecoveryRequest = 'TRUNCATE TABLE password_recovery_requests'
 
+const deletePasswordRecoveryRequestInInterval = "DELETE FROM password_recovery_requests WHERE created_at < NOW() - INTERVAL '15 minutes'"
+
 export default {
   getPasswordRecoveryRequestByEmail,
   deletePasswordRecoveryRequestById,
+  deletePasswordRecoveryRequestInInterval,
   createPasswordRecoveryRequest,
   truncatePasswordRecoveryRequest
 }

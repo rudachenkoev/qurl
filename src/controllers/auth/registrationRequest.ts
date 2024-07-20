@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { schedule } from 'node-cron'
-import Joi from 'joi'
+import Joi, { ValidationResult } from 'joi'
 import { sendVerificationCodeMail } from '@helpers/mailService'
 import { generatePasswordHash, generateAccessToken, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
@@ -10,7 +10,7 @@ import registrationRequestQueries from '@/queries/registrationRequest'
 import jwtTokenQueries from '@/queries/jwtToken'
 import { checkRecaptchaValidity } from '@helpers/recaptcha'
 
-const validateRegistrationRequest = (values: Record<any, any>) => {
+const validateRegistrationRequest = (values: Record<string, any>): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     recaptcha: Joi.string().required()
@@ -73,10 +73,10 @@ export const createRegistrationRequest = async (req: Request, res: Response) => 
 
 // Clear registration requests evert 15 minutes
 if (process.env.DEV_MODE !== 'true') {
-  schedule('*/15 * * * *', () => pool.query(registrationRequestQueries.truncateRegistrationRequest))
+  schedule('*/15 * * * *', () => pool.query(registrationRequestQueries.deleteRegistrationRequestInInterval))
 }
 
-const validateRegistrationRequestConfirmation = (values: Record<any, any>) => {
+const validateRegistrationRequestConfirmation = (values: Record<string, any>): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     verification_code: Joi.string().length(6).required(),
