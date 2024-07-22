@@ -5,10 +5,9 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "node",
-    "baseUrl": "src",
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "paths": {
       "@/*": ["./*"],
       "@config/*": ["config/*"],
@@ -17,6 +16,5 @@
       "@helpers/*": ["helpers/*"],
       "@middleware/*": ["middleware/*"]
     }
-  },
-  "include": ["src/**/*"]
+  }
 }

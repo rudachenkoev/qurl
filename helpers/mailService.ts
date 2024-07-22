@@ -41,7 +41,7 @@ const replacePlaceholders = (html: string, replacements: IReplacements) => {
 }
 
 export const sendVerificationCodeMail = async ({ to, subject = '', replacements }: { to: string, subject: string, replacements: IReplacements }) => {
-  const mailPath = path.join(__dirname, '..', '..', 'public', 'html', 'VerificationCodeMail.html')
+  const mailPath = path.join(__dirname, '..', 'public', 'html', 'VerificationCodeMail.html')
   const mainTemplate = fs.readFileSync(mailPath, 'utf-8')
   return await sendMail({
     to,
