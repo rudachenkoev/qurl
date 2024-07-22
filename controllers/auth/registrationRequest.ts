@@ -2,21 +2,21 @@ import { Request, Response } from 'express'
 import { schedule } from 'node-cron'
 import Joi, { ValidationResult } from 'joi'
 import { sendVerificationCodeMail } from '@helpers/mailService'
-import { generatePasswordHash, generateAccessToken, generateSixDigitCode } from '@helpers/auth'
+import { generateAccessToken, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
+import { checkRecaptchaValidity } from '@helpers/recaptcha'
 const { User, RegistrationRequest, Session } = require('@/models')
-
-import { pool } from '@/db'
-import registrationRequestQueries from '@/queries/registrationRequest'
+const { Op } = require('sequelize')
 
 const validateRegistrationRequest = (values: Record<string, any>): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
-    // recaptcha: Joi.string().required()
+    recaptcha: Joi.string().required()
   })
   return schema.validate(values)
 }
 const sendVerificationEmail = async (email: string, verificationCode: string) => {
+  if (process.env.DEV_MODE === 'true') return
   return sendVerificationCodeMail({
     to: email,
     subject: 'Complete registration process',
@@ -40,11 +40,11 @@ export const createRegistrationRequest = async (req: Request, res: Response) => 
 
     const { email, recaptcha } = req.body
     // Check recaptcha validity
-    // const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
-    // if (!isValid) {
-    //   res.status(400).send(recaptchaError)
-    //   return
-    // }
+    const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
+    if (!isValid) {
+      res.status(400).send(recaptchaError)
+      return
+    }
     // Check already exist registration request
     const registrationRequest = await RegistrationRequest.findOne({ where: { email } })
     if (registrationRequest) {
@@ -53,8 +53,8 @@ export const createRegistrationRequest = async (req: Request, res: Response) => 
       return
     }
     // Check already created user with email
-    const user = await User.findOne({ where: { email } })
-    if (user) {
+    const userAmount = await User.count({ where: { email } })
+    if (userAmount) {
       res.status(400).send('A user with this email address already exists')
       return
     }
@@ -70,15 +70,27 @@ export const createRegistrationRequest = async (req: Request, res: Response) => 
 
 // Clear registration requests evert 15 minutes
 if (process.env.DEV_MODE !== 'true') {
-  schedule('*/15 * * * *', () => pool.query(registrationRequestQueries.deleteRegistrationRequestInInterval))
+  schedule('*/15 * * * *', async () => {
+    try {
+      await RegistrationRequest.destroy({
+        where: {
+          createdAt: {
+            [Op.lt]: new Date(Date.now() - 15 * 60 * 1000)
+          }
+        }
+      })
+      console.log('Old registration requests deleted successfully.')
+    } catch (error) {
+      console.error('Error deleting old registration requests:', error)
+    }
+  })
 }
 
 const validateRegistrationRequestConfirmation = (values: Record<string, any>): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     verification_code: Joi.string().length(6).required(),
-    password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber),
-    password_confirmation: Joi.string().required().equal(Joi.ref('password'))
+    password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber)
   })
   return schema.validate(values)
 }
@@ -105,7 +117,7 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
       return
     }
     // Create new user profiles
-    const user = await User.create({ email, password: generatePasswordHash(password) })
+    const user = await User.create({ email, password })
     // Remove registration request
     await RegistrationRequest.destroy({ where: { id: registrationRequest.id } })
     // Add jwt authorization token

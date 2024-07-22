@@ -1,5 +1,6 @@
 'use strict'
 const { Model } = require('sequelize')
+const { generatePasswordHash } = require('../helpers/auth')
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     /**
@@ -20,7 +21,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     password: {
       allowNull: false,
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      set(value) {
+        this.setDataValue('password', generatePasswordHash(value))
+      }
     },
     is_active: {
       defaultValue: true,
