@@ -7,7 +7,10 @@ const isAuthenticated = (req, res, next) => {
   if (!token) return res.sendStatus(401)
 
   jwt.verify(token, process.env.TOKEN_SECRET, (err, decoded) => {
-    if (err) return res.sendStatus(403)
+    if (err) {
+      res.sendStatus(403)
+      return
+    }
     req.userId = decoded.id
     next()
   })
