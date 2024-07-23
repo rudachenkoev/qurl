@@ -10,6 +10,7 @@ const validateLogin = values => {
   return schema.validate(values)
 }
 
+// Handles user login by validating credentials, checking user existence, and managing authentication tokens.
 const login = async (req, res) => {
   try {
     // Check validation

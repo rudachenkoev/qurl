@@ -28,6 +28,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
   })
 }
 
+// Handles the registration request by validating input, checking reCAPTCHA, and managing existing registration requests or users.
 const createRegistrationRequest = async (req, res) => {
   try {
     // Check validation
@@ -95,6 +96,7 @@ const validateRegistrationRequestConfirmation = values => {
   return schema.validate(values)
 }
 
+// Confirms a registration request by validating the provided data, verifying the registration request, creating a user profile, and managing tokens and requests.
 const confirmRegistrationRequest = async (req, res) => {
   try {
     // Check validation

@@ -28,6 +28,7 @@ const sendPasswordRecoveryMail = async (email, verificationCode) => {
   })
 }
 
+// Handles the creation of a password recovery request by validating input, checking reCAPTCHA, and managing existing or new recovery requests.
 const createPasswordRecoveryRequest = async (req, res) => {
   try {
     // Check validation
@@ -95,6 +96,7 @@ const validatePasswordRecoveryRequestConfirmation = values => {
   return schema.validate(values)
 }
 
+// Confirms a password recovery request by validating the input, verifying the recovery request, updating the user password, and managing authentication tokens.
 const confirmPasswordRecoveryRequest = async (req, res) => {
   try {
     // Check validation
