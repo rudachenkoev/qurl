@@ -1,7 +1,7 @@
 const express = require('express')
-const { confirmRegistrationRequest, createRegistrationRequest } = require('../controllers/auth/registrationRequest')
-const { confirmPasswordRecoveryRequest, createPasswordRecoveryRequest } = require('../controllers/auth/passwordRecoveryRequest')
-const { login } = require('../controllers/auth')
+const { confirmRegistrationRequest, createRegistrationRequest } = require('@controllers/auth/registrationRequest')
+const { confirmPasswordRecoveryRequest, createPasswordRecoveryRequest } = require('@controllers/auth/passwordRecoveryRequest')
+const { login } = require('@controllers/auth')
 
 const router = express.Router()
 

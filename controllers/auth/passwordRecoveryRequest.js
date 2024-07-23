@@ -1,10 +1,10 @@
 const { schedule } = require('node-cron')
 const Joi = require('joi')
-const { sendVerificationCodeMail } = require('../../helpers/mailService')
-const { generateAccessToken, generateSixDigitCode } = require('../../helpers/auth')
-const { containsLowercase, containsNumber, containsUppercase } = require('../../helpers/validators')
-const { checkRecaptchaValidity } = require('../../helpers/recaptcha')
-const { User, PasswordRecoveryRequest, Session } = require('../../models')
+const { sendVerificationCodeMail } = require('@helpers/mailService')
+const { generateAccessToken, generateSixDigitCode } = require('@helpers/auth')
+const { containsLowercase, containsNumber, containsUppercase } = require('@helpers/validators')
+const { checkRecaptchaValidity } = require('@helpers/recaptcha')
+const { User, PasswordRecoveryRequest, Session } = require('@/models')
 const { Op } = require('sequelize')
 
 const validatePasswordRecoveryRequest = values  => {
@@ -123,7 +123,7 @@ const confirmPasswordRecoveryRequest = async (req, res) => {
       return
     }
     // Update the current or create a new authorization token
-    const user = User.findOne({ where: { email }})
+    const user = await User.findOne({ where: { email }})
     const newData = { token: generateAccessToken(user.id) }
     const [record, isCreated] = await Session.findOrCreate({
       where: { user_id: user.id },

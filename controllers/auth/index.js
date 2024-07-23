@@ -1,6 +1,6 @@
 const Joi = require('joi')
-const { generateAccessToken, generatePasswordHash } = require('../../helpers/auth')
-const { User, Session } = require('../../models')
+const { generateAccessToken, generatePasswordHash } = require('@helpers/auth')
+const { User, Session } = require('@/models')
 
 const validateLogin = values => {
   const schema = Joi.object({

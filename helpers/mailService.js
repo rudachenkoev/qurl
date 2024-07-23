@@ -1,4 +1,3 @@
-require('dotenv').config()
 const { createTransport } = require('nodemailer')
 const fs = require('fs')
 const path = require('path')

@@ -1,10 +1,10 @@
 const { schedule } = require('node-cron')
 const Joi = require('joi')
-const { sendVerificationCodeMail } = require('../../helpers/mailService')
-const { generateAccessToken, generateSixDigitCode } = require('../../helpers/auth')
-const { containsLowercase, containsNumber, containsUppercase } = require('../../helpers/validators')
-const { checkRecaptchaValidity } = require('../../helpers/recaptcha')
-const { User, RegistrationRequest, Session } = require('../../models')
+const { sendVerificationCodeMail } = require('@helpers/mailService')
+const { generateAccessToken, generateSixDigitCode } = require('@helpers/auth')
+const { containsLowercase, containsNumber, containsUppercase } = require('@helpers/validators')
+const { checkRecaptchaValidity } = require('@helpers/recaptcha')
+const { User, RegistrationRequest, Session } = require('@/models')
 const { Op } = require('sequelize')
 
 const validateRegistrationRequest = values => {

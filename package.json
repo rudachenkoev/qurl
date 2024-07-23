@@ -14,6 +14,7 @@
     "express": "^4.18.2",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.7",
     "pg": "^8.12.0",
@@ -22,5 +23,10 @@
   },
   "devDependencies": {
     "sequelize-cli": "^6.6.2"
+  },
+  "_moduleAliases": {
+    "@": ".",
+    "@helpers": "helpers",
+    "@controllers": "controllers"
   }
 }

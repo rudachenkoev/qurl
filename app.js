@@ -1,16 +1,18 @@
 require('dotenv').config()
+require('module-alias/register')
+
 const express = require('express')
 const http = require('http')
 const cors = require('cors')
 const { json }  = require('body-parser')
-const routes = require('./routes')
+const router = require('./routes')
 const { sequelize } = require('./models')
 
 const app = express()
 
 app.use(json())
 app.use(cors())
-app.use('/api/v1', routes)
+app.use('/api/v1', router)
 
 const connectToDatabase = async () => {
   try {
@@ -24,7 +26,7 @@ const connectToDatabase = async () => {
 (async () => {
   await connectToDatabase()
 
-  const port = process.env.PORT
+  const port = process.env.PORT || 3000
   const server = http.createServer(app)
   server.listen(port, () => console.log(`Server running on http://localhost:${port}/`))
 })()
