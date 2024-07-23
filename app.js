@@ -1,10 +1,10 @@
-import express from 'express'
-import 'dotenv/config'
-import http from 'http'
-import cors from 'cors'
-import { json } from 'body-parser'
-import routes from './routes'
-import { sequelize } from './models'
+require('dotenv').config()
+const express = require('express')
+const http = require('http')
+const cors = require('cors')
+const { json }  = require('body-parser')
+const routes = require('./routes')
+const { sequelize } = require('./models')
 
 const app = express()
 

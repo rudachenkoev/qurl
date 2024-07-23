@@ -1,7 +1,7 @@
-import { createTransport } from 'nodemailer'
-import * as process from 'process'
-import fs from 'fs'
-import path from 'path'
+require('dotenv').config()
+const { createTransport } = require('nodemailer')
+const fs = require('fs')
+const path = require('path')
 
 const sender = process.env.EMAIL_USER
 const mailTransporter = createTransport({
@@ -12,13 +12,7 @@ const mailTransporter = createTransport({
   }
 })
 
-interface IMailDetails {
-  to: string,
-  subject?: string,
-  text?: string,
-  html?: string
-}
-const sendMail = (details: IMailDetails):Promise<any> => {
+const sendMail = details => {
   const mailDetails = { from: sender, ...details }
   return new Promise((resolve, reject) => {
     mailTransporter.sendMail(mailDetails, function (err, info) {
@@ -28,10 +22,7 @@ const sendMail = (details: IMailDetails):Promise<any> => {
   })
 }
 
-interface IReplacements {
-  [key: string]: string
-}
-const replacePlaceholders = (html: string, replacements: IReplacements) => {
+const replacePlaceholders = (html, replacements) => {
   let result = html
   Object.keys(replacements).forEach(placeholder => {
     const regex = new RegExp(`{{ ${placeholder} }}`, 'g')
@@ -40,7 +31,7 @@ const replacePlaceholders = (html: string, replacements: IReplacements) => {
   return result
 }
 
-export const sendVerificationCodeMail = async ({ to, subject = '', replacements }: { to: string, subject: string, replacements: IReplacements }) => {
+const sendVerificationCodeMail = async ({ to, subject = '', replacements }) => {
   const mailPath = path.join(__dirname, '..', 'public', 'html', 'VerificationCodeMail.html')
   const mainTemplate = fs.readFileSync(mailPath, 'utf-8')
   return await sendMail({
@@ -48,4 +39,8 @@ export const sendVerificationCodeMail = async ({ to, subject = '', replacements 
     subject,
     html: replacePlaceholders(mainTemplate, replacements)
   })
+}
+
+module.exports = {
+  sendVerificationCodeMail
 }

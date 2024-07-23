@@ -1,7 +1,7 @@
-import express from 'express'
-import { confirmRegistrationRequest, createRegistrationRequest } from '@controllers/auth/registrationRequest'
-import { login } from '@controllers/auth'
-import { confirmPasswordRecoveryRequest, createPasswordRecoveryRequest } from '@controllers/auth/passwordRecoveryRequest'
+const express = require('express')
+const { confirmRegistrationRequest, createRegistrationRequest } = require('../controllers/auth/registrationRequest')
+const { confirmPasswordRecoveryRequest, createPasswordRecoveryRequest } = require('../controllers/auth/passwordRecoveryRequest')
+const { login } = require('../controllers/auth')
 
 const router = express.Router()
 
@@ -11,4 +11,4 @@ router.post('/login/', login)
 router.post('/password-recovery-requests/', createPasswordRecoveryRequest)
 router.post('/password-recovery-requests/confirmation/', confirmPasswordRecoveryRequest)
 
-export default router
+module.exports = router

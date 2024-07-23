@@ -1,10 +1,15 @@
-import axios from 'axios'
+require('dotenv').config()
+const axios = require('axios')
 
-export const checkRecaptchaValidity = async (value: String) => {
+const checkRecaptchaValidity = async value => {
   const url = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET}&response=${value}`
   const response = await axios.post(url)
   return {
     isValid: response.data.success,
     error: !response.data.success ? response.data['error-codes'][0] : ''
   }
+}
+
+module.exports = {
+  checkRecaptchaValidity
 }

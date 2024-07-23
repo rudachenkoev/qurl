@@ -1,21 +1,21 @@
-import { Request, Response } from 'express'
-import { schedule } from 'node-cron'
-import Joi, { ValidationResult } from 'joi'
-import { sendVerificationCodeMail } from '@helpers/mailService'
-import { generateAccessToken, generateSixDigitCode } from '@helpers/auth'
-import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
-import { checkRecaptchaValidity } from '@helpers/recaptcha'
-const { User, RegistrationRequest, Session } = require('@/models')
+const { schedule } = require('node-cron')
+const Joi = require('joi')
+const { sendVerificationCodeMail } = require('../../helpers/mailService')
+const { generateAccessToken, generateSixDigitCode } = require('../../helpers/auth')
+const { containsLowercase, containsNumber, containsUppercase } = require('../../helpers/validators')
+const { checkRecaptchaValidity } = require('../../helpers/recaptcha')
+const { User, RegistrationRequest, Session } = require('../../models')
 const { Op } = require('sequelize')
 
-const validateRegistrationRequest = (values: Record<string, any>): ValidationResult => {
+const validateRegistrationRequest = values => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     recaptcha: Joi.string().required()
   })
   return schema.validate(values)
 }
-const sendVerificationEmail = async (email: string, verificationCode: string) => {
+
+const sendVerificationEmail = async (email, verificationCode) => {
   if (process.env.DEV_MODE === 'true') return
   return sendVerificationCodeMail({
     to: email,
@@ -28,7 +28,7 @@ const sendVerificationEmail = async (email: string, verificationCode: string) =>
   })
 }
 
-export const createRegistrationRequest = async (req: Request, res: Response) => {
+const createRegistrationRequest = async (req, res) => {
   try {
     // Check validation
     const { error } = validateRegistrationRequest(req.body)
@@ -86,7 +86,7 @@ if (process.env.DEV_MODE !== 'true') {
   })
 }
 
-const validateRegistrationRequestConfirmation = (values: Record<string, any>): ValidationResult => {
+const validateRegistrationRequestConfirmation = values => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     verification_code: Joi.string().length(6).required(),
@@ -95,7 +95,7 @@ const validateRegistrationRequestConfirmation = (values: Record<string, any>): V
   return schema.validate(values)
 }
 
-export const confirmRegistrationRequest = async (req: Request, res: Response) => {
+const confirmRegistrationRequest = async (req, res) => {
   try {
     // Check validation
     const { error } = validateRegistrationRequestConfirmation(req.body)
@@ -118,14 +118,19 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
     }
     // Create new user profiles
     const user = await User.create({ email, password })
-    // Remove registration request
-    await RegistrationRequest.destroy({ where: { id: registrationRequest.id } })
     // Add jwt authorization token
     const accessToken = generateAccessToken(user.id)
     await Session.create({ user_id: user.id, token: accessToken })
+    // Remove registration request
+    await RegistrationRequest.destroy({ where: { id: registrationRequest.id } })
 
     res.status(201).json({ bearer: accessToken })
   } catch (error) {
     res.status(500).send(error)
   }
+}
+
+module.exports = {
+  createRegistrationRequest,
+  confirmRegistrationRequest
 }

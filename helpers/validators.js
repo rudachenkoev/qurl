@@ -1,4 +1,4 @@
-export const containsUppercase = (value: string, helpers: any) => {
+const containsUppercase = (value, helpers) => {
   const uppercaseRegex = /^(?=.*[A-Z])/
   if (!uppercaseRegex.test(value)) {
     return helpers.message('Password must contain at least 1 uppercase letter')
@@ -6,7 +6,7 @@ export const containsUppercase = (value: string, helpers: any) => {
   return value
 }
 
-export const containsLowercase = (value: string, helpers: any) => {
+const containsLowercase = (value, helpers) => {
   const lowercaseRegex = /^(?=.*[a-z])/
   if (!lowercaseRegex.test(value)) {
     return helpers.message('Password must contain at least 1 lowercase letter')
@@ -14,10 +14,16 @@ export const containsLowercase = (value: string, helpers: any) => {
   return value
 }
 
-export const containsNumber = (value: string, helpers: any) => {
+const containsNumber = (value, helpers) => {
   const numberRegex = /^(?=.*\d)/
   if (!numberRegex.test(value)) {
     return helpers.message('Password must contain at least 1 digit')
   }
   return value
+}
+
+module.exports = {
+  containsUppercase,
+  containsLowercase,
+  containsNumber
 }
