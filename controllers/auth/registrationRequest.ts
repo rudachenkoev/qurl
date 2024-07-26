@@ -2,7 +2,7 @@ import { schedule } from 'node-cron'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
 import { sendVerificationCodeMail } from'@helpers/mailService'
-import { generateAccessToken, generateSixDigitCode } from'@helpers/auth'
+import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from'@helpers/validators'
 import { checkRecaptchaValidity } from'@helpers/recaptcha'
 import { PrismaClient } from '@prisma/client'
@@ -29,7 +29,7 @@ const sendVerificationEmail = async (email: string, verificationCode: string) =>
     replacements: {
       title: 'Complete registration process',
       text: 'To complete registration process, copy the verification code and paste it into the application. The code will be valid for 15 minutes.',
-      verification_code: verificationCode
+      verificationCode: verificationCode
     }
   })
 }
@@ -129,7 +129,7 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
     }
     // Create new user profiles
     const user = await prisma.user.create({
-      data: { email, password }
+      data: { email, password: generatePasswordHash(password) }
     })
     // Add jwt authorization token
     const token = generateAccessToken(user.id)

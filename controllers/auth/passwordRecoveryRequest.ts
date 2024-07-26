@@ -2,7 +2,7 @@ import { schedule } from 'node-cron'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
 import { sendVerificationCodeMail } from'@helpers/mailService'
-import { generateAccessToken, generateSixDigitCode } from'@helpers/auth'
+import {generateAccessToken, generatePasswordHash, generateSixDigitCode} from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from'@helpers/validators'
 import { checkRecaptchaValidity } from'@helpers/recaptcha'
 import { PrismaClient } from '@prisma/client'
@@ -29,7 +29,7 @@ const sendPasswordRecoveryMail = async (email: string, verificationCode: string)
     replacements: {
       title: 'Complete password recovery process',
       text: 'To complete password recovery process, copy the verification code and paste it into the application. The code will be valid for 15 minutes.',
-      verification_code: verificationCode
+      verificationCode: verificationCode
     }
   })
 }
@@ -93,13 +93,13 @@ if (process.env.DEV_MODE !== 'true') {
 
 interface PasswordRecoveryConfirmationBody {
   email: string
-  verification_code: string
+  verificationCode: string
   password: string
 }
 const validatePasswordRecoveryRequestConfirmation = (values: PasswordRecoveryConfirmationBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
-    verification_code: Joi.string().length(6).required(),
+    verificationCode: Joi.string().length(6).required(),
     password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber)
   })
   return schema.validate(values)
@@ -130,7 +130,7 @@ export const confirmPasswordRecoveryRequest = async (req: Request, res: Response
     // Update userprofile password
     const updateUser  = await prisma.user.update({
       where: { email },
-      data: { password }
+      data: { password: generatePasswordHash(password) }
     })
     // Update the current or create a new authorization token
     const token = generateAccessToken(updateUser.id)
