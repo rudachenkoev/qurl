@@ -7,6 +7,7 @@
   },
   "author": "Yevgen Rudachenko",
   "dependencies": {
+    "@prisma/client": "^5.17.0",
     "axios": "^1.6.5",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
@@ -16,17 +17,12 @@
     "jsonwebtoken": "^9.0.2",
     "module-alias": "^2.2.3",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.7",
-    "pg": "^8.12.0",
-    "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.3"
+    "nodemailer": "^6.9.7"
   },
   "devDependencies": {
-    "sequelize-cli": "^6.6.2"
-  },
-  "_moduleAliases": {
-    "@": ".",
-    "@helpers": "helpers",
-    "@controllers": "controllers"
+    "@types/node": "^20.14.12",
+    "prisma": "^5.17.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
   }
 }
