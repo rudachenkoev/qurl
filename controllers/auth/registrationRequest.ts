@@ -1,13 +1,19 @@
-const { schedule } = require('node-cron')
-const Joi = require('joi')
-const { sendVerificationCodeMail } = require('@helpers/mailService')
-const { generateAccessToken, generateSixDigitCode } = require('@helpers/auth')
-const { containsLowercase, containsNumber, containsUppercase } = require('@helpers/validators')
-const { checkRecaptchaValidity } = require('@helpers/recaptcha')
-const { User, RegistrationRequest, Session } = require('@/models')
-const { Op } = require('sequelize')
+import { schedule } from 'node-cron'
+import { Request, Response } from 'express'
+import Joi, { ValidationResult } from 'joi'
+import { sendVerificationCodeMail } from'@helpers/mailService'
+import { generateAccessToken, generateSixDigitCode } from'@helpers/auth'
+import { containsLowercase, containsNumber, containsUppercase } from'@helpers/validators'
+import { checkRecaptchaValidity } from'@helpers/recaptcha'
+import { PrismaClient } from '@prisma/client'
 
-const validateRegistrationRequest = values => {
+const prisma = new PrismaClient()
+
+interface RegistrationRequestBody {
+  email: string
+  recaptcha: string
+}
+const validateRegistrationRequest = (values: RegistrationRequestBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     recaptcha: Joi.string().required()
@@ -15,7 +21,7 @@ const validateRegistrationRequest = values => {
   return schema.validate(values)
 }
 
-const sendVerificationEmail = async (email, verificationCode) => {
+const sendVerificationEmail = async (email: string, verificationCode: string) => {
   if (process.env.DEV_MODE === 'true') return
   return sendVerificationCodeMail({
     to: email,
@@ -29,7 +35,7 @@ const sendVerificationEmail = async (email, verificationCode) => {
 }
 
 // Handles the registration request by validating input, checking reCAPTCHA, and managing existing registration requests or users.
-const createRegistrationRequest = async (req, res) => {
+export const createRegistrationRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     // Check validation
     const { error } = validateRegistrationRequest(req.body)
@@ -47,21 +53,23 @@ const createRegistrationRequest = async (req, res) => {
       return
     }
     // Check already exist registration request
-    const registrationRequest = await RegistrationRequest.findOne({ where: { email } })
+    const registrationRequest = await prisma.registrationRequest.findUnique({ where: { email } })
     if (registrationRequest) {
-      await sendVerificationEmail(email, registrationRequest.verification_code)
+      await sendVerificationEmail(email, registrationRequest.verificationCode)
       res.sendStatus(200)
       return
     }
     // Check already created user with email
-    const userAmount = await User.count({ where: { email } })
+    const userAmount = await prisma.user.count({ where: { email } })
     if (userAmount) {
       res.status(400).send('A user with this email address already exists')
       return
     }
     // Create new registration request
     const verificationCode = generateSixDigitCode()
-    await RegistrationRequest.create({ email, verification_code: verificationCode })
+    await prisma.registrationRequest.create({
+      data: { email, verificationCode  }
+    })
     await sendVerificationEmail(email, verificationCode)
     res.sendStatus(201)
   } catch (error) {
@@ -72,32 +80,33 @@ const createRegistrationRequest = async (req, res) => {
 // Clear registration requests evert 15 minutes
 if (process.env.DEV_MODE !== 'true') {
   schedule('*/15 * * * *', async () => {
-    try {
-      await RegistrationRequest.destroy({
-        where: {
-          createdAt: {
-            [Op.lt]: new Date(Date.now() - 15 * 60 * 1000)
-          }
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000)
+    await prisma.registrationRequest.deleteMany({
+      where: {
+        createdAt: {
+          lt: fifteenMinutesAgo
         }
-      })
-      console.log('Old registration requests deleted successfully.')
-    } catch (error) {
-      console.error('Error deleting old registration requests:', error)
-    }
+      }
+    })
   })
 }
 
-const validateRegistrationRequestConfirmation = values => {
+interface RegistrationConfirmationBody {
+  email: string
+  verificationCode: string
+  password: string
+}
+const validateRegistrationRequestConfirmation = (values: RegistrationConfirmationBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
-    verification_code: Joi.string().length(6).required(),
+    verificationCode: Joi.string().length(6).required(),
     password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber)
   })
   return schema.validate(values)
 }
 
 // Confirms a registration request by validating the provided data, verifying the registration request, creating a user profile, and managing tokens and requests.
-const confirmRegistrationRequest = async (req, res) => {
+export const confirmRegistrationRequest = async (req: Request, res: Response) => {
   try {
     // Check validation
     const { error } = validateRegistrationRequestConfirmation(req.body)
@@ -107,32 +116,31 @@ const confirmRegistrationRequest = async (req, res) => {
       return
     }
 
-    const { email, verification_code, password } = req.body
+    const { email, verificationCode, password } = req.body
     // Check registration request existing
-    const registrationRequest = await RegistrationRequest.findOne({ where: { email } })
+    const registrationRequest = await prisma.registrationRequest.findFirst({ where: { email } })
     if (!registrationRequest) {
       res.status(400).send('Registration request not found')
       return
     }
-    if (registrationRequest.verification_code !== verification_code) {
+    if (registrationRequest.verificationCode !== verificationCode) {
       res.status(400).send('Invalid verification code')
       return
     }
     // Create new user profiles
-    const user = await User.create({ email, password })
+    const user = await prisma.user.create({
+      data: { email, password }
+    })
     // Add jwt authorization token
-    const accessToken = generateAccessToken(user.id)
-    await Session.create({ user_id: user.id, token: accessToken })
+    const token = generateAccessToken(user.id)
+    await prisma.session.create({
+      data: { userId: user.id, token }
+    })
     // Remove registration request
-    await RegistrationRequest.destroy({ where: { id: registrationRequest.id } })
+    await prisma.registrationRequest.delete({ where: { id: registrationRequest.id } })
 
-    res.status(201).json({ bearer: accessToken })
+    res.status(201).json({ bearer: token })
   } catch (error) {
     res.status(500).send(error)
   }
-}
-
-module.exports = {
-  createRegistrationRequest,
-  confirmRegistrationRequest
 }
