@@ -1,8 +1,15 @@
-const Joi = require('joi')
-const { generateAccessToken, generatePasswordHash } = require('@helpers/auth')
-const { User, Session } = require('@/models')
+import Joi, { ValidationResult } from 'joi'
+import { Request, Response } from 'express'
+import {generateAccessToken, generatePasswordHash} from '@helpers/auth'
+import { PrismaClient } from '@prisma/client'
 
-const validateLogin = values => {
+const prisma = new PrismaClient()
+
+interface LoginValues {
+  email: string
+  password: string
+}
+const validateLogin = (values: LoginValues): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().required()
@@ -11,7 +18,7 @@ const validateLogin = values => {
 }
 
 // Handles user login by validating credentials, checking user existence, and managing authentication tokens.
-const login = async (req, res) => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     // Check validation
     const { error } = validateLogin(req.body)
@@ -23,7 +30,7 @@ const login = async (req, res) => {
 
     const { email, password } = req.body
     // Find user by credits
-    const user = await User.findOne({
+    const user = await prisma.user.findFirst({
       where: {
         email,
         password: generatePasswordHash(password)
@@ -34,19 +41,16 @@ const login = async (req, res) => {
       return
     }
     // Update the current or create a new authorization token
-    const newData = { token: generateAccessToken(user.id) }
-    const [record, isCreated] = await Session.findOrCreate({
-      where: { user_id: user.id },
-      defaults: newData
-    })
-    if (!isCreated) await record.update(newData)
+    const token = generateAccessToken(user.id)
 
-    res.status(200).json({ bearer: newData.token })
+    await prisma.session.upsert({
+      where: { userId: user.id },
+      update: { token },
+      create: { userId: user.id, token }
+    })
+
+    res.status(200).json({ bearer: token })
   } catch (error) {
     res.status(500).send(error)
   }
-}
-
-module.exports = {
-  login
 }
