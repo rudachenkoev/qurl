@@ -1,12 +1,12 @@
-import { schedule } from 'node-cron'
+import defaultCategories from '@constants/defaultCategories'
+import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
+import { sendVerificationCodeMail } from '@helpers/mailService'
+import { checkRecaptchaValidity } from '@helpers/recaptcha'
+import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
+import { PrismaClient } from '@prisma/client'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
-import { sendVerificationCodeMail } from'@helpers/mailService'
-import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
-import { containsLowercase, containsNumber, containsUppercase } from'@helpers/validators'
-import { checkRecaptchaValidity } from'@helpers/recaptcha'
-import defaultCategories from '@constants/defaultCategories'
-import { PrismaClient } from '@prisma/client'
+import { schedule } from 'node-cron'
 
 const prisma = new PrismaClient()
 
@@ -76,7 +76,7 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
     // Create new registration request
     const verificationCode = generateSixDigitCode()
     await prisma.registrationRequest.create({
-      data: { email, verificationCode  }
+      data: { email, verificationCode }
     })
     await sendVerificationEmail(email, verificationCode)
     res.sendStatus(201)

@@ -1,11 +1,11 @@
-import { schedule } from 'node-cron'
+import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
+import { sendVerificationCodeMail } from '@helpers/mailService'
+import { checkRecaptchaValidity } from '@helpers/recaptcha'
+import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
+import { PrismaClient } from '@prisma/client'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
-import { sendVerificationCodeMail } from'@helpers/mailService'
-import {generateAccessToken, generatePasswordHash, generateSixDigitCode} from '@helpers/auth'
-import { containsLowercase, containsNumber, containsUppercase } from'@helpers/validators'
-import { checkRecaptchaValidity } from'@helpers/recaptcha'
-import { PrismaClient } from '@prisma/client'
+import { schedule } from 'node-cron'
 
 const prisma = new PrismaClient()
 
@@ -13,7 +13,7 @@ interface PasswordRecoveryRequestBody {
   email: string
   recaptcha?: string
 }
-const validatePasswordRecoveryRequest = (values: PasswordRecoveryRequestBody): ValidationResult  => {
+const validatePasswordRecoveryRequest = (values: PasswordRecoveryRequestBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
     recaptcha: Joi.when(Joi.ref('$DEV_MODE'), {
@@ -133,7 +133,7 @@ export const confirmPasswordRecoveryRequest = async (req: Request, res: Response
       return
     }
     // Update userprofile password
-    const updateUser  = await prisma.user.update({
+    const updateUser = await prisma.user.update({
       where: { email },
       data: { password: generatePasswordHash(password) }
     })

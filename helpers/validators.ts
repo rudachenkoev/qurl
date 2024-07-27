@@ -1,4 +1,4 @@
-import { ErrorReport  } from 'joi'
+import { ErrorReport } from 'joi'
 
 // Validation function to check if a value contains at least one uppercase letter.
 export const containsUppercase = (value: string, helpers: any): string | ErrorReport => {

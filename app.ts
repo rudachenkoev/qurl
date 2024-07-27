@@ -1,9 +1,9 @@
+import { json } from 'body-parser'
+import cors from 'cors'
 import 'dotenv/config'
-import 'module-alias/register'
 import express from 'express'
 import http from 'http'
-import cors from 'cors'
-import {json} from 'body-parser'
+import 'module-alias/register'
 import router from './routes'
 
 const app = express()

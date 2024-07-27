@@ -1,5 +1,5 @@
-import { createTransport, Transporter } from 'nodemailer'
 import fs from 'fs'
+import { createTransport, Transporter } from 'nodemailer'
 import path from 'path'
 
 const sender = process.env.EMAIL_USER as string
@@ -43,7 +43,15 @@ const replacePlaceholders = (html: string, replacements: Replacements): string =
 }
 
 // Sends a verification code email using a pre-defined HTML template with dynamic content.
-const sendVerificationCodeMail = async ({ to, subject = '', replacements }: { to: string, subject?: string, replacements: Replacements }): Promise<object> => {
+const sendVerificationCodeMail = async ({
+  to,
+  subject = '',
+  replacements
+}: {
+  to: string
+  subject?: string
+  replacements: Replacements
+}): Promise<object> => {
   const mailPath = path.join(__dirname, '..', 'public', 'html', 'VerificationCodeMail.html')
   const mainTemplate = fs.readFileSync(mailPath, 'utf-8')
   return await sendMail({
@@ -53,6 +61,4 @@ const sendVerificationCodeMail = async ({ to, subject = '', replacements }: { to
   })
 }
 
-export {
-  sendVerificationCodeMail
-}
+export { sendVerificationCodeMail }

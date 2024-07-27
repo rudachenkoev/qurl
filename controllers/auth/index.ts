@@ -1,7 +1,7 @@
-import Joi, { ValidationResult } from 'joi'
-import { Request, Response } from 'express'
-import {generateAccessToken, generatePasswordHash} from '@helpers/auth'
+import { generateAccessToken, generatePasswordHash } from '@helpers/auth'
 import { PrismaClient } from '@prisma/client'
+import { Request, Response } from 'express'
+import Joi, { ValidationResult } from 'joi'
 
 const prisma = new PrismaClient()
 

@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 
 interface AuthenticatedRequest extends Request {
@@ -9,7 +9,7 @@ const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: NextFun
   const authHeader = req.get('Authorization')
   const token = authHeader?.split(' ')[1]
 
-  if (!token)  {
+  if (!token) {
     res.sendStatus(401)
     return
   }

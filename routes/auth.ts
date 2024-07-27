@@ -1,7 +1,10 @@
-import express from 'express'
-import { confirmRegistrationRequest, createRegistrationRequest } from '@controllers/auth/registrationRequest'
-import { confirmPasswordRecoveryRequest, createPasswordRecoveryRequest } from '@controllers/auth/passwordRecoveryRequest'
 import { login } from '@controllers/auth'
+import {
+  confirmPasswordRecoveryRequest,
+  createPasswordRecoveryRequest
+} from '@controllers/auth/passwordRecoveryRequest'
+import { confirmRegistrationRequest, createRegistrationRequest } from '@controllers/auth/registrationRequest'
+import express from 'express'
 
 const router = express.Router()
 

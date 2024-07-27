@@ -3,7 +3,10 @@ import jwt from 'jsonwebtoken'
 
 // Generates a HMAC SHA-256 hash of the given password using a secret key.
 export const generatePasswordHash = (password: string): string => {
-  return crypto.createHmac('sha256', process.env.PASSWORD_SECRET as string).update(password).digest('hex')
+  return crypto
+    .createHmac('sha256', process.env.PASSWORD_SECRET as string)
+    .update(password)
+    .digest('hex')
 }
 
 // Generates a JSON Web Token (JWT) for the specified user identifier.
