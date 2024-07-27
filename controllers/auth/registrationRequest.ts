@@ -12,14 +12,19 @@ const prisma = new PrismaClient()
 
 interface RegistrationRequestBody {
   email: string
-  recaptcha: string
+  recaptcha?: string
 }
 const validateRegistrationRequest = (values: RegistrationRequestBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
-    recaptcha: Joi.string().required()
+    recaptcha: Joi.when(Joi.ref('$DEV_MODE'), {
+      is: 'true',
+      then: Joi.any(),
+      otherwise: Joi.string().required()
+    })
   })
-  return schema.validate(values)
+  const context = { DEV_MODE: process.env.DEV_MODE }
+  return schema.validate(values, { context })
 }
 
 const sendVerificationEmail = async (email: string, verificationCode: string) => {
@@ -48,10 +53,12 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
 
     const { email, recaptcha } = req.body
     // Check recaptcha validity
-    const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
-    if (!isValid) {
-      res.status(400).send(recaptchaError)
-      return
+    if (process.env.DEV_MODE !== 'true') {
+      const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
+      if (!isValid) {
+        res.status(400).send(recaptchaError)
+        return
+      }
     }
     // Check already exist registration request
     const registrationRequest = await prisma.registrationRequest.findUnique({ where: { email } })

@@ -11,14 +11,19 @@ const prisma = new PrismaClient()
 
 interface PasswordRecoveryRequestBody {
   email: string
-  recaptcha: string
+  recaptcha?: string
 }
 const validatePasswordRecoveryRequest = (values: PasswordRecoveryRequestBody): ValidationResult  => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
-    recaptcha: Joi.string().required()
+    recaptcha: Joi.when(Joi.ref('$DEV_MODE'), {
+      is: 'true',
+      then: Joi.any(),
+      otherwise: Joi.string().required()
+    })
   })
-  return schema.validate(values)
+  const context = { DEV_MODE: process.env.DEV_MODE }
+  return schema.validate(values, { context })
 }
 
 const sendPasswordRecoveryMail = async (email: string, verificationCode: string) => {
