@@ -1,4 +1,4 @@
-import defaultCategories from '@constants/defaultCategories'
+import defaultCategories from '@/constants/defaultCategories'
 import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { sendVerificationCodeMail } from '@helpers/mailService'
 import { checkRecaptchaValidity } from '@helpers/recaptcha'

@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 
 interface AuthenticatedRequest extends Request {
-  userId?: string
+  userId?: number
 }
 
 const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
@@ -19,9 +19,9 @@ const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: NextFun
       res.sendStatus(403)
       return
     }
-    req.userId = (decoded as JwtPayload).id
+    req.userId = Number((decoded as JwtPayload).id)
     next()
   })
 }
 
-export { isAuthenticated }
+export { AuthenticatedRequest, isAuthenticated }

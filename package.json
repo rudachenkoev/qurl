@@ -36,8 +36,8 @@
     "typescript": "^5.5.4"
   },
   "_moduleAliases": {
+    "@": "./",
     "@helpers": "helpers",
-    "@controllers": "controllers",
-    "@constants": "constants"
+    "@controllers": "controllers"
   }
 }

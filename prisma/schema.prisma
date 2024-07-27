@@ -16,7 +16,7 @@ datasource db {
 model User {
   id         Int        @id @default(autoincrement())
   createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  updatedAt  DateTime   @default(now()) @updatedAt
   email      String     @unique
   password   String
   isActive   Boolean    @default(true)
@@ -29,7 +29,7 @@ model User {
 model Session {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
   token     String   @unique
   user      User     @relation(fields: [userId], references: [id])
   userId    Int      @unique
@@ -38,9 +38,9 @@ model Session {
 model RegistrationRequest {
   id               Int      @id @default(autoincrement())
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  updatedAt        DateTime @default(now()) @updatedAt
   email            String   @unique
-  verificationCode String
+  verificationCode String   @db.VarChar(6)
 
   @@index([email])
 }
@@ -48,17 +48,21 @@ model RegistrationRequest {
 model PasswordRecoveryRequest {
   id               Int      @id @default(autoincrement())
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  updatedAt        DateTime @default(now()) @updatedAt
   email            String   @unique
-  verificationCode String
+  verificationCode String   @db.VarChar(6)
 
   @@index([email])
 }
 
 model Category {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
   name      String
-  isDefault Boolean @default(false)
-  user      User    @relation(fields: [userId], references: [id])
+  isDefault Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
   userId    Int
+
+  @@unique([userId, name])
 }
