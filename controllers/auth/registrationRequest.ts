@@ -5,6 +5,7 @@ import { sendVerificationCodeMail } from'@helpers/mailService'
 import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { containsLowercase, containsNumber, containsUppercase } from'@helpers/validators'
 import { checkRecaptchaValidity } from'@helpers/recaptcha'
+import defaultCategories from '@constants/defaultCategories'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -127,9 +128,15 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
       res.status(400).send('Invalid verification code')
       return
     }
-    // Create new user profiles
+    // Create new user profiles with default categories
     const user = await prisma.user.create({
-      data: { email, password: generatePasswordHash(password) }
+      data: {
+        email,
+        password: generatePasswordHash(password),
+        categories: {
+          create: defaultCategories
+        }
+      }
     })
     // Add jwt authorization token
     const token = generateAccessToken(user.id)
