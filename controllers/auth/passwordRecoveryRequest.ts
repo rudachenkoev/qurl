@@ -18,7 +18,7 @@ const validatePasswordRecoveryRequest = (values: PasswordRecoveryRequestBody): V
     email: Joi.string().email().required(),
     recaptcha: Joi.when(Joi.ref('$DEV_MODE'), {
       is: 'true',
-      then: Joi.any(),
+      then: Joi.string().optional(),
       otherwise: Joi.string().required()
     })
   })
@@ -52,10 +52,12 @@ export const createPasswordRecoveryRequest = async (req: Request, res: Response)
 
     const { email, recaptcha } = req.body
     // Check recaptcha validity
-    const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
-    if (!isValid) {
-      res.status(400).send(recaptchaError)
-      return
+    if (recaptcha) {
+      const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
+      if (!isValid) {
+        res.status(400).send(recaptchaError)
+        return
+      }
     }
     // Check already exist password recovery request
     const passwordRecoveryRequest = await prisma.passwordRecoveryRequest.findFirst({ where: { email } })

@@ -19,7 +19,7 @@ const validateRegistrationRequest = (values: RegistrationRequestBody): Validatio
     email: Joi.string().email().required(),
     recaptcha: Joi.when(Joi.ref('$DEV_MODE'), {
       is: 'true',
-      then: Joi.any(),
+      then: Joi.string().optional(),
       otherwise: Joi.string().required()
     })
   })
@@ -53,7 +53,7 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
 
     const { email, recaptcha } = req.body
     // Check recaptcha validity
-    if (process.env.DEV_MODE !== 'true') {
+    if (recaptcha) {
       const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
       if (!isValid) {
         res.status(400).send(recaptchaError)
