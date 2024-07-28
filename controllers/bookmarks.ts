@@ -1,5 +1,5 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
-import { fetchPageTitle } from '@helpers/bookmark'
+import { extractTitle, fetchPageTitle } from '@helpers/bookmark'
 import { Bookmark, PrismaClient } from '@prisma/client'
 import { Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
@@ -161,9 +161,12 @@ export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Respons
       return
     }
     // Extract and get page title using puppeteer
-    const title = await fetchPageTitle(req.body.url)
+    const originalTitle = await fetchPageTitle(req.body.url)
 
-    res.status(200).send({ title })
+    res.status(200).send({
+      originalTitle,
+      extractTitle: extractTitle(originalTitle)
+    })
   } catch (error) {
     res.status(500).send(error)
   }
