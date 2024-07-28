@@ -1,5 +1,5 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
-import { PrismaClient } from '@prisma/client'
+import { Category, PrismaClient } from '@prisma/client'
 import { Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
 
@@ -27,10 +27,7 @@ export const getUserCategories = async (req: AuthenticatedRequest, res: Response
   }
 }
 
-interface CategoryBody {
-  name: string
-}
-const validateCategory = (values: CategoryBody): ValidationResult => {
+const validateCategory = (values: Category): ValidationResult => {
   const schema = Joi.object({
     name: Joi.string().required()
   })
@@ -69,7 +66,7 @@ export const getUserCategoryById = async (req: AuthenticatedRequest, res: Respon
     const category = await prisma.category.findFirst({
       where: {
         userId: req.userId,
-        id: +req.params.id
+        id: +req.params.categoryId
       },
       select: responseSerializer
     })
@@ -89,7 +86,7 @@ export const removeUserCategoryById = async (req: AuthenticatedRequest, res: Res
     const category = await prisma.category.findFirst({
       where: {
         userId: req.userId,
-        id: +req.params.id
+        id: +req.params.categoryId
       },
       select: responseSerializer
     })
@@ -104,10 +101,10 @@ export const removeUserCategoryById = async (req: AuthenticatedRequest, res: Res
     await prisma.category.delete({
       where: {
         userId: req.userId,
-        id: +req.params.id
+        id: +req.params.categoryId
       }
     })
-    res.status(204)
+    res.sendStatus(204)
   } catch (error) {
     res.status(500).send(error)
   }

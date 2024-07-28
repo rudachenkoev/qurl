@@ -22,6 +22,7 @@ model User {
   isActive   Boolean    @default(true)
   session    Session?
   categories Category[]
+  Bookmark   Bookmark[]
 
   @@index([email])
 }
@@ -56,13 +57,30 @@ model PasswordRecoveryRequest {
 }
 
 model Category {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id        Int        @id @default(autoincrement())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
   name      String
-  isDefault Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id])
+  isDefault Boolean    @default(false)
+  user      User       @relation(fields: [userId], references: [id])
   userId    Int
+  Bookmark  Bookmark[]
 
   @@unique([userId, name])
+}
+
+model Bookmark {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  title       String
+  description String?
+  url         String
+
+  @@unique([userId, url])
+  @@unique([userId, title])
 }
