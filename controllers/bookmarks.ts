@@ -1,4 +1,5 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
+import { fetchPageTitle } from '@helpers/bookmark'
 import { Bookmark, PrismaClient } from '@prisma/client'
 import { Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
@@ -139,6 +140,30 @@ export const removeUserBookmarkById = async (req: AuthenticatedRequest, res: Res
       }
     })
     res.sendStatus(204)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+}
+
+const validateBookmarkUrlData = (values: { url: string }): ValidationResult => {
+  const schema = Joi.object({
+    url: Joi.string().uri().required()
+  })
+  return schema.validate(values)
+}
+export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    // Check validation
+    const { error } = validateBookmarkUrlData(req.body)
+    if (error) {
+      const errors = error.details.map(item => item.message)
+      res.status(400).send(errors)
+      return
+    }
+    // Extract and get page title using puppeteer
+    const title = await fetchPageTitle(req.body.url)
+
+    res.status(200).send({ title })
   } catch (error) {
     res.status(500).send(error)
   }

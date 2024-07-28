@@ -1,6 +1,7 @@
 import { isAuthenticated } from '@/middleware/auth'
 import {
   createUserBookmark,
+  getBookmarkUrlData,
   getUserBookmarkById,
   getUserBookmarks,
   removeUserBookmarkById
@@ -13,5 +14,6 @@ router.post('/', isAuthenticated, createUserBookmark)
 router.get('/', isAuthenticated, getUserBookmarks)
 router.get('/:bookmarkId/', isAuthenticated, getUserBookmarkById)
 router.delete('/:bookmarkId/', isAuthenticated, removeUserBookmarkById)
+router.post('/substitute-data/', isAuthenticated, getBookmarkUrlData)
 
 export default router
