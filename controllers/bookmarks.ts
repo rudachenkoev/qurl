@@ -1,5 +1,5 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
-import { extractTitle, fetchPageTitle } from '@helpers/bookmark'
+import { classifyTitleCategory, extractTitle, fetchPageTitle } from '@helpers/bookmark'
 import { Bookmark, PrismaClient } from '@prisma/client'
 import { Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
@@ -160,12 +160,25 @@ export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Respons
       res.status(400).send(errors)
       return
     }
+    // Get user categories
+    const categories = await prisma.category.findMany({
+      where: {
+        userId: req.userId
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    })
     // Extract and get page title using puppeteer
     const originalTitle = await fetchPageTitle(req.body.url)
+    // Classify title category
+    const classifiedCategory = await classifyTitleCategory(originalTitle, categories)
 
     res.status(200).send({
       originalTitle,
-      extractTitle: extractTitle(originalTitle)
+      extractTitle: extractTitle(originalTitle),
+      category: classifiedCategory
     })
   } catch (error) {
     res.status(500).send(error)
