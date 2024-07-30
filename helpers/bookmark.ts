@@ -34,12 +34,12 @@ export const extractTitle = (title: string): string => {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_SECRET as string)
-export const classifyTitleCategory = async (title: string, categories: Category[]): Promise<string> => {
+export const classifyTitleCategory = async (title: string, categories: Partial<Category>[]) => {
   // The Gemini 1.5 models are versatile and work with both text-only and multimodal prompts
   const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
-  const prompt = `Which category from the list: ${categories.map(cat => JSON.stringify(cat)).join(', ')} does the title: “${title}” belong to? Return only the id of the category.`
+  const prompt = `Which category from the list: [${JSON.stringify(categories)}] refers to title:“${title}”? If a matching category is found, return only the category ID in the answer. If no matching category is found, return only NULL in the response.`
   const result = await model.generateContent(prompt)
   const response = result.response
-  return response.text()
+  return Number(response.text())
 }
