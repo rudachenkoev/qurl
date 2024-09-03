@@ -17,6 +17,7 @@ interface RegistrationRequestBody {
 const validateRegistrationRequest = (values: RegistrationRequestBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
+    password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber),
     recaptcha: Joi.when(Joi.ref('$DEV_MODE'), {
       is: 'true',
       then: Joi.string().optional(),
@@ -51,7 +52,7 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
       return
     }
 
-    const { email, recaptcha } = req.body
+    const { email, password, recaptcha } = req.body
     // Check recaptcha validity
     if (recaptcha) {
       const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
@@ -76,7 +77,11 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
     // Create new registration request
     const verificationCode = generateSixDigitCode()
     await prisma.registrationRequest.create({
-      data: { email, verificationCode }
+      data: {
+        email,
+        password: generatePasswordHash(password),
+        verificationCode
+      }
     })
     await sendVerificationEmail(email, verificationCode)
     res.sendStatus(201)
@@ -107,8 +112,7 @@ interface RegistrationConfirmationBody {
 const validateRegistrationRequestConfirmation = (values: RegistrationConfirmationBody): ValidationResult => {
   const schema = Joi.object({
     email: Joi.string().email().required(),
-    verificationCode: Joi.string().length(6).required(),
-    password: Joi.string().required().min(8).custom(containsUppercase).custom(containsLowercase).custom(containsNumber)
+    verificationCode: Joi.string().length(6).required()
   })
   return schema.validate(values)
 }
@@ -124,7 +128,7 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
       return
     }
 
-    const { email, verificationCode, password } = req.body
+    const { email, verificationCode } = req.body
     // Check registration request existing
     const registrationRequest = await prisma.registrationRequest.findFirst({ where: { email } })
     if (!registrationRequest) {
@@ -139,7 +143,7 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
     const user = await prisma.user.create({
       data: {
         email,
-        password: generatePasswordHash(password),
+        password: registrationRequest.password,
         categories: {
           create: defaultCategories
         }

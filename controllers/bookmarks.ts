@@ -170,7 +170,7 @@ export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Respons
         name: true
       }
     })
-    // Extract and get page title using puppeteer
+    // Get page title using puppeteer
     const originalTitle = await fetchPageTitle(req.body.url)
     // Classify title category
     const classifiedCategory = await classifyTitleCategory(originalTitle, categories)
