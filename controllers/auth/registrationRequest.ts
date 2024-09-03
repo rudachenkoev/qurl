@@ -6,6 +6,7 @@ import { containsLowercase, containsNumber, containsUppercase } from '@helpers/v
 import { PrismaClient } from '@prisma/client'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
+import NodeCache from 'node-cache'
 import { schedule } from 'node-cron'
 
 const prisma = new PrismaClient()
@@ -42,6 +43,7 @@ const sendVerificationEmail = async (email: string, verificationCode: string) =>
 }
 
 // Handles the registration request by validating input, checking reCAPTCHA, and managing existing registration requests or users.
+const createRegistrationRequestCache = new NodeCache({ stdTTL: 30 })
 export const createRegistrationRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     // Check validation
@@ -53,6 +55,12 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
     }
 
     const { email, password, recaptcha } = req.body
+    // Check if there was a registration request with this email in the last 30 seconds
+    const lastRequestTime = createRegistrationRequestCache.get(email)
+    if (lastRequestTime) {
+      res.status(429).send('You can only request registration every 30 seconds.')
+      return
+    }
     // Check recaptcha validity
     if (recaptcha) {
       const { isValid, error: recaptchaError } = await checkRecaptchaValidity(recaptcha)
@@ -65,6 +73,7 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
     const registrationRequest = await prisma.registrationRequest.findUnique({ where: { email } })
     if (registrationRequest) {
       await sendVerificationEmail(email, registrationRequest.verificationCode)
+      createRegistrationRequestCache.set(email, Date.now())
       res.sendStatus(200)
       return
     }
@@ -84,6 +93,7 @@ export const createRegistrationRequest = async (req: Request, res: Response): Pr
       }
     })
     await sendVerificationEmail(email, verificationCode)
+    createRegistrationRequestCache.set(email, Date.now())
     res.sendStatus(201)
   } catch (error) {
     res.status(500).send(error)

@@ -5,4 +5,5 @@
 
 */
 -- AlterTable
-ALTER TABLE "RegistrationRequest" ADD COLUMN     "password" TEXT NOT NULL;
+ALTER TABLE "RegistrationRequest" ADD COLUMN "password" TEXT NOT NULL DEFAULT '';
+
