@@ -1,5 +1,6 @@
 import { generateAccessToken, generatePasswordHash } from '@helpers/auth'
 import { PrismaClient } from '@prisma/client'
+import crypto from 'crypto'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
 
@@ -53,4 +54,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     res.status(500).send(error)
   }
+}
+
+export const getChannelHash = async (_: Request, res: Response) => {
+  const randomToken = crypto.randomBytes(64).toString('hex')
+  const timestamp = new Date().toISOString()
+
+  const channelHash = generatePasswordHash(`${timestamp}||${randomToken}`)
+
+  res.status(200).json({ channelHash })
 }
