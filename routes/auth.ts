@@ -1,4 +1,5 @@
-import { getChannelHash, login } from '@controllers/auth'
+import { login } from '@controllers/auth'
+import { confirmAuthChannel, getAuthChannel } from '@controllers/auth/channel'
 import {
   confirmPasswordRecoveryRequest,
   createPasswordRecoveryRequest
@@ -13,6 +14,7 @@ router.post('/registration-requests/confirmation/', confirmRegistrationRequest)
 router.post('/login/', login)
 router.post('/password-recovery-requests/', createPasswordRecoveryRequest)
 router.post('/password-recovery-requests/confirmation/', confirmPasswordRecoveryRequest)
-router.get('/channel-hash/', getChannelHash)
+router.get('/channel/', getAuthChannel)
+router.post('/channel/confirmation/', confirmAuthChannel)
 
 export default router
