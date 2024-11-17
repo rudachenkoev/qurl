@@ -16,7 +16,7 @@ const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: NextFun
 
   jwt.verify(token, process.env.TOKEN_SECRET as string, (err, decoded) => {
     if (err || !decoded || typeof decoded === 'string') {
-      res.sendStatus(403)
+      res.sendStatus(401)
       return
     }
     req.userId = Number((decoded as JwtPayload).id)
