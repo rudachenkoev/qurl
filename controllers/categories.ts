@@ -1,4 +1,5 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
+import { orderQuery, paginateQuery } from '@helpers/query'
 import { Category, PrismaClient } from '@prisma/client'
 import { Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
@@ -15,11 +16,16 @@ const responseSerializer = {
 // Retrieves categories for the authenticated user.
 export const getUserCategories = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
+    const pagination = paginateQuery(req.query)
+    const ordering = orderQuery(req.query)
+
     const categories = await prisma.category.findMany({
       where: {
         userId: req.userId
       },
-      select: responseSerializer
+      select: responseSerializer,
+      ...pagination,
+      ...ordering
     })
     res.status(200).send(categories)
   } catch (error) {
