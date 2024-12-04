@@ -66,10 +66,56 @@ export const createUserCategory = async (req: AuthenticatedRequest, res: Respons
   }
 }
 
+// Updates an exist category for the authenticated user by its ID.
+export const updateUserCategoryById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    // Check validation
+    const { error } = validateCategory(req.body)
+    if (error) {
+      const errors = error.details.map(item => item.message)
+      res.status(400).send(errors)
+      return
+    }
+
+    // Fetch the category to check if it's default
+    const category = await prisma.category.findUnique({
+      where: {
+        id: +req.params.categoryId,
+        userId: req.userId
+      }
+    })
+
+    if (!category) {
+      res.status(404).send({ message: 'Category not found' })
+      return
+    }
+
+    if (category.isDefault) {
+      res.status(400).send({ message: 'Default categories cannot be edited' })
+      return
+    }
+
+    // Update exist user category
+    const updatedCategory = await prisma.category.update({
+      where: {
+        userId: req.userId,
+        id: +req.params.categoryId
+      },
+      data: {
+        name: req.body.name
+      },
+      select: responseSerializer
+    })
+    res.status(200).send(updatedCategory)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+}
+
 // Retrieves a specific category for the authenticated user by its ID.
 export const getUserCategoryById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const category = await prisma.category.findFirst({
+    const category = await prisma.category.findUnique({
       where: {
         userId: req.userId,
         id: +req.params.categoryId
@@ -89,7 +135,7 @@ export const getUserCategoryById = async (req: AuthenticatedRequest, res: Respon
 // Deletes a specific category for the authenticated user by its ID.
 export const removeUserCategoryById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const category = await prisma.category.findFirst({
+    const category = await prisma.category.findUnique({
       where: {
         userId: req.userId,
         id: +req.params.categoryId

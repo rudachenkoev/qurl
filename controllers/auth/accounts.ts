@@ -13,7 +13,7 @@ const responseSerializer = {
 // Retrieves the current authenticated user.
 export const getCurrentUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: {
         id: req.userId
       },

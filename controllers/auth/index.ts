@@ -30,7 +30,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const { email, password } = req.body
     // Find user by credits
-    const user = await prisma.user.findFirst({
+    const user = await prisma.user.findUnique({
       where: {
         email,
         password: generatePasswordHash(password)

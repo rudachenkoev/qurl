@@ -39,7 +39,7 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
 
     const { title, description, url, categoryId } = req.body
     // Get category information
-    const category = await prisma.category.findFirst({
+    const category = await prisma.category.findUnique({
       where: {
         id: +categoryId,
         userId: req.userId
@@ -93,7 +93,7 @@ export const getUserBookmarks = async (req: AuthenticatedRequest, res: Response)
 // Retrieves a specific bookmark for the authenticated user by its ID.
 export const getUserBookmarkById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const bookmark = await prisma.bookmark.findFirst({
+    const bookmark = await prisma.bookmark.findUnique({
       where: {
         userId: req.userId,
         id: +req.params.bookmarkId

@@ -140,7 +140,7 @@ export const confirmRegistrationRequest = async (req: Request, res: Response) =>
 
     const { email, verificationCode } = req.body
     // Check registration request existing
-    const registrationRequest = await prisma.registrationRequest.findFirst({ where: { email } })
+    const registrationRequest = await prisma.registrationRequest.findUnique({ where: { email } })
     if (!registrationRequest) {
       res.status(400).send('Registration request not found')
       return

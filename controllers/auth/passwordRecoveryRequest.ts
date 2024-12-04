@@ -60,7 +60,7 @@ export const createPasswordRecoveryRequest = async (req: Request, res: Response)
       }
     }
     // Check already exist password recovery request
-    const passwordRecoveryRequest = await prisma.passwordRecoveryRequest.findFirst({ where: { email } })
+    const passwordRecoveryRequest = await prisma.passwordRecoveryRequest.findUnique({ where: { email } })
     if (passwordRecoveryRequest) {
       await sendPasswordRecoveryMail(email, passwordRecoveryRequest.verificationCode)
       res.sendStatus(200)
@@ -125,7 +125,7 @@ export const confirmPasswordRecoveryRequest = async (req: Request, res: Response
 
     const { email, verificationCode, password } = req.body
     // Check password recovery request existing
-    const passwordRecoveryRequest = await prisma.passwordRecoveryRequest.findFirst({ where: { email } })
+    const passwordRecoveryRequest = await prisma.passwordRecoveryRequest.findUnique({ where: { email } })
     if (!passwordRecoveryRequest) {
       res.status(400).send('Password recovery request not found')
       return
