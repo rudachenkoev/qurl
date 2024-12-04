@@ -3,30 +3,22 @@ import { PrismaClient } from '@prisma/client'
 import { ParsedQs } from 'qs'
 
 const paginateQuery = (query: ParsedQs): { skip?: number; take?: number } => {
-  const page = query.page && typeof query.page === 'string' ? parseInt(query.page, 10) : null
-  const pageCount = query.pageCount && typeof query.pageCount === 'string' ? parseInt(query.pageCount, 10) : null
+  const page = parseInt(query.page as string, 10)
+  const pageCount = parseInt(query.pageCount as string, 10)
 
-  if (!page || !pageCount) return {}
+  if (isNaN(page) || isNaN(pageCount)) return {}
 
-  return {
-    skip: (page - 1) * pageCount,
-    take: pageCount
-  }
+  return { skip: (page - 1) * pageCount, take: pageCount }
 }
 
 const orderQuery = (query: ParsedQs): { orderBy?: { [column: string]: 'asc' | 'desc' } } => {
-  const ordering = query.ordering && typeof query.ordering === 'string' ? query.ordering : null
-
+  const ordering = query.ordering as string
   if (!ordering) return {}
 
   const direction = ordering.startsWith('-') ? 'desc' : 'asc'
   const column = direction === 'desc' ? ordering.slice(1) : ordering
 
-  return {
-    orderBy: {
-      [column]: direction
-    }
-  }
+  return { orderBy: { [column]: direction } }
 }
 
 export async function handleQueryResponse<T>(
@@ -43,19 +35,24 @@ export async function handleQueryResponse<T>(
   const pagination = paginateQuery(query)
   const ordering = orderQuery(query)
 
-  // Getting data taking into account filters
-  const results = await (prisma[model] as any).findMany({
-    where,
-    select,
-    ...pagination,
-    ...ordering
-  })
+  try {
+    // Getting data taking into account filters
+    const results = await (prisma[model] as any).findMany({
+      where,
+      select,
+      ...pagination,
+      ...ordering
+    })
 
-  // If pagination of items is requested
-  if (Object.keys(pagination).length) {
-    const totalCount = await (prisma[model] as any).count({ where })
-    return { totalCount, results }
+    // If pagination of items is requested
+    if (Object.keys(pagination).length) {
+      const totalCount = await (prisma[model] as any).count({ where })
+      return { totalCount, results }
+    }
+
+    return results
+  } catch (error) {
+    console.error('Error fetching data:', error)
+    throw new Error('Failed to fetch data')
   }
-
-  return results
 }
