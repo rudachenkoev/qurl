@@ -1,9 +1,7 @@
+import prisma from '@/services/prisma'
 import { generateAccessToken, generatePasswordHash } from '@helpers/auth'
-import { PrismaClient } from '@prisma/client'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
-
-const prisma = new PrismaClient()
 
 interface LoginValues {
   email: string

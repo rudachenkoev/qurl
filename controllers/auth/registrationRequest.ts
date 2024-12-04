@@ -1,15 +1,13 @@
 import defaultCategories from '@/constants/defaultCategories'
+import prisma from '@/services/prisma'
 import { generateAccessToken, generatePasswordHash, generateSixDigitCode } from '@helpers/auth'
 import { sendVerificationCodeMail } from '@helpers/mailService'
 import { checkRecaptchaValidity } from '@helpers/recaptcha'
 import { containsLowercase, containsNumber, containsUppercase } from '@helpers/validators'
-import { PrismaClient } from '@prisma/client'
 import { Request, Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
 import NodeCache from 'node-cache'
 import { schedule } from 'node-cron'
-
-const prisma = new PrismaClient()
 
 interface RegistrationRequestBody {
   email: string

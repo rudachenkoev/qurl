@@ -1,8 +1,7 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
-import { PrismaClient } from '@prisma/client'
+import prisma from '@/services/prisma'
 import { Response } from 'express'
 
-const prisma = new PrismaClient()
 const responseSerializer = {
   id: true,
   email: true,

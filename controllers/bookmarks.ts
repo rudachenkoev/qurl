@@ -1,11 +1,11 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
+import prisma from '@/services/prisma'
 import { classifyTitleCategory, extractTitle, fetchPageTitle } from '@helpers/bookmark'
-import { orderQuery, paginateQuery } from '@helpers/query'
-import { Bookmark, PrismaClient } from '@prisma/client'
+import { handleQueryResponse } from '@helpers/query'
+import { Bookmark } from '@prisma/client'
 import { Response } from 'express'
 import Joi, { ValidationResult } from 'joi'
 
-const prisma = new PrismaClient()
 const responseSerializer = {
   id: true,
   title: true,
@@ -73,18 +73,12 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
 // Retrieves bookmarks for the authenticated user.
 export const getUserBookmarks = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const pagination = paginateQuery(req.query)
-    const ordering = orderQuery(req.query)
-
-    const bookmarks = await prisma.bookmark.findMany({
-      where: {
-        userId: req.userId
-      },
-      select: responseSerializer,
-      ...pagination,
-      ...ordering
+    const response = await handleQueryResponse('bookmark', {
+      query: req.query,
+      where: { userId: req.userId },
+      select: responseSerializer
     })
-    res.status(200).send(bookmarks)
+    res.status(200).send(response)
   } catch (error) {
     res.status(500).send(error)
   }
