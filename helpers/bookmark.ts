@@ -1,45 +1,57 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { Category } from '@prisma/client'
+import axios from 'axios'
 import puppeteer from 'puppeteer'
 
 // Fetches the title of a web page from the given URL.
 export const fetchPageTitle = async (url: string): Promise<string> => {
   const browser = await puppeteer.launch()
-  const page = await browser.newPage()
-  // Set a user agent to mimic a real browser
-  await page.setUserAgent(
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-  )
-  // Navigate to the page and wait for the necessary network activity
-  await page.goto(url)
-  // Wait for the title to be visible
-  await page.waitForSelector('title')
-  // Extract the title
-  const title = await page.title()
-  await browser.close()
+  try {
+    const page = await browser.newPage()
 
-  return title
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    )
+
+    await page.goto(url, { waitUntil: 'domcontentloaded' })
+
+    return await page.title()
+  } catch (error) {
+    console.error('Error fetching page title:', error)
+    throw new Error('Failed to fetch the page title')
+  } finally {
+    if (browser) await browser.close()
+  }
 }
 
 // Extracts the main title from a given input string by splitting it on common delimiters and filtering out URL-like parts.
 export const extractTitle = (title: string): string => {
-  // Split the string by common delimiters excluding single hyphens within words
-  let parts = title.split(/(\s[|•–]\s| - | \| )/).filter(part => part.trim().length > 0)
-  // Function to check if a part is a URL or domain
-  function isUrlPart(part: string): boolean {
-    return /^(https?:\/\/)?(www\.)?[a-z0-9\-]+\.[a-z]{2,}([\/?#].*)?$/i.test(part)
-  }
-  // Find the first part that is not a URL and is not too short
+  const parts = title.split(/\s[|•–-]\s| - | \| /).filter(part => part.trim().length > 0)
+
+  const isUrlPart = (part: string): boolean => /^(https?:\/\/)?(www\.)?[a-z0-9-]+\.[a-z]{2,}([\/?#].*)?$/i.test(part)
+
   return parts.find(part => !isUrlPart(part) && part.length > 3) || parts[0]
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_SECRET as string)
-export const classifyTitleCategory = async (title: string, categories: Partial<Category>[]) => {
-  // The Gemini 1.5 models are versatile and work with both text-only and multimodal prompts
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+export const classifyTitleCategory = async (title: string, categories: Partial<Category>[]): Promise<number | null> => {
+  try {
+    const labels = categories.map(({ name }) => name)
 
-  const prompt = `Which category from the list: [${JSON.stringify(categories)}] refers to title:“${title}”? If a matching category is found, return only the category ID in the answer. If no matching category is found, return only NULL in the response.`
-  const result = await model.generateContent(prompt)
-  const response = result.response
-  return Number(response.text())
+    const { data } = await axios.post(
+      'https://api-inference.huggingface.co/models/facebook/bart-large-mnli',
+      {
+        inputs: title,
+        parameters: { candidate_labels: labels }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_TOKEN}`
+        }
+      }
+    )
+
+    return categories.find(({ name }) => name === data.labels[0])?.id || null
+  } catch (error) {
+    console.error('Error during title classification:', error)
+    throw new Error('Title classification failed')
+  }
 }

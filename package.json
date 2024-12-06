@@ -8,7 +8,6 @@
   },
   "author": "Yevgen Rudachenko",
   "dependencies": {
-    "@google/generative-ai": "^0.16.0",
     "@prisma/client": "^5.17.0",
     "axios": "^1.6.5",
     "body-parser": "^1.20.2",
