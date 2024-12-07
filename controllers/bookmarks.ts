@@ -21,7 +21,7 @@ const validateBookmark = (values: Bookmark): ValidationResult => {
     title: Joi.string().required(),
     description: Joi.string().optional(),
     url: Joi.string().uri().required(),
-    categoryId: Joi.number().required()
+    category: Joi.number().required()
   })
   return schema.validate(values)
 }
@@ -37,7 +37,7 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
       return
     }
 
-    const { title, description, url, categoryId } = req.body
+    const { title, description, url, category: categoryId } = req.body
     // Get category information
     const category = await prisma.category.findUnique({
       where: {
