@@ -3,7 +3,11 @@ import axios from 'axios'
 import puppeteer from 'puppeteer'
 
 // Fetches the title of a web page from the given URL.
-export const fetchPageTitle = async (url: string): Promise<string> => {
+interface PageInfo {
+  title: string
+  description: string
+}
+export const fetchPageInfo = async (url: string): Promise<PageInfo> => {
   const browser = await puppeteer.launch()
   try {
     const page = await browser.newPage()
@@ -14,10 +18,16 @@ export const fetchPageTitle = async (url: string): Promise<string> => {
 
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
-    return await page.title()
+    return await page.evaluate(() => {
+      const title = document.title
+      const descriptionMeta = document.querySelector('meta[name="description"]')
+      const description = descriptionMeta?.getAttribute('content') || ''
+
+      return { title, description }
+    })
   } catch (error) {
-    console.error('Error fetching page title:', error)
-    throw new Error('Failed to fetch the page title')
+    console.error('Error fetching page info:', error)
+    throw new Error('Failed to fetch the page info')
   } finally {
     if (browser) await browser.close()
   }

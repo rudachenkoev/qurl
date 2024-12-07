@@ -1,6 +1,6 @@
 import { AuthenticatedRequest } from '@/middleware/auth'
 import prisma from '@/services/prisma'
-import { classifyTitleCategory, extractTitle, fetchPageTitle } from '@helpers/bookmark'
+import { classifyTitleCategory, extractTitle, fetchPageInfo } from '@helpers/bookmark'
 import { handleQueryResponse } from '@helpers/query'
 import { Bookmark } from '@prisma/client'
 import { Response } from 'express'
@@ -21,7 +21,7 @@ const validateBookmark = (values: Bookmark): ValidationResult => {
     title: Joi.string().required(),
     description: Joi.string().optional(),
     url: Joi.string().uri().required(),
-    category: Joi.number().required()
+    categoryId: Joi.number().required()
   })
   return schema.validate(values)
 }
@@ -37,7 +37,7 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
       return
     }
 
-    const { title, description, url, category: categoryId } = req.body
+    const { title, description, url, categoryId } = req.body
     // Get category information
     const category = await prisma.category.findUnique({
       where: {
@@ -170,15 +170,15 @@ export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Respons
         name: true
       }
     })
-    // Get page title using puppeteer
-    const originalTitle = await fetchPageTitle(req.body.url)
+    // Get page info using puppeteer
+    const { title, description } = await fetchPageInfo(req.body.url)
     // Classify title category
-    const classifiedCategory = await classifyTitleCategory(originalTitle, categories)
+    const classifiedCategory = await classifyTitleCategory(title, categories)
 
     res.status(200).send({
-      originalTitle,
-      extractTitle: extractTitle(originalTitle),
-      category: classifiedCategory
+      title: extractTitle(title) || title,
+      description,
+      categoryId: classifiedCategory
     })
   } catch (error) {
     res.status(500).send(error)
