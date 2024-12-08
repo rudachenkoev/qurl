@@ -14,9 +14,10 @@ model User {
   email      String     @unique
   password   String
   isActive   Boolean    @default(true)
-  Bookmark   Bookmark[]
+  bookmarks  Bookmark[]
   categories Category[]
   session    Session?
+  contacts   Contact[]
 
   @@index([email])
 }
@@ -78,4 +79,17 @@ model Bookmark {
 
   @@unique([userId, url])
   @@unique([userId, title])
+}
+
+model Contact {
+  id         String   @id @default(uuid())
+  externalId String?  @unique
+  userId     Int
+  name       String
+  birthday   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, externalId])
 }
