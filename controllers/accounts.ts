@@ -75,8 +75,10 @@ export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: 
     const transaction = req.body.map((contact: Contact) => {
       return prisma.contact.upsert({
         where: {
-          userId: req.userId,
-          externalId: contact.id
+          userId_externalId: {
+            userId: req.userId!,
+            externalId: contact.id
+          }
         },
         update: {
           birthday: contact.birthday,
@@ -87,7 +89,7 @@ export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: 
           birthday: contact.birthday,
           name: contact.name,
           user: {
-            connect: { id: req.userId }
+            connect: { id: req.userId! }
           }
         }
       })
