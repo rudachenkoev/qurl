@@ -52,9 +52,11 @@ const validateUserContacts = (values: Contact[]): ValidationResult => {
   const schema = Joi.array()
     .items(
       Joi.object({
-        id: Joi.string().required(),
+        id: Joi.string()
+          .regex(/^[0-9a-fA-F-]{36}/)
+          .required(),
         name: Joi.string().required(),
-        birthday: Joi.date().iso().less('now').required()
+        birthday: Joi.alternatives().try(Joi.string().allow(''), Joi.date().iso())
       })
     )
     .min(1)
@@ -75,8 +77,10 @@ export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: 
     const transaction = req.body.map((contact: Contact) => {
       return prisma.contact.upsert({
         where: {
-          userId: req.userId,
-          externalId: contact.id
+          userId_externalId: {
+            userId: req.userId!,
+            externalId: contact.id
+          }
         },
         update: {
           birthday: contact.birthday,
@@ -87,7 +91,7 @@ export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: 
           birthday: contact.birthday,
           name: contact.name,
           user: {
-            connect: { id: req.userId }
+            connect: { id: req.userId! }
           }
         }
       })
