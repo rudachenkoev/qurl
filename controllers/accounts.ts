@@ -52,9 +52,11 @@ const validateUserContacts = (values: Contact[]): ValidationResult => {
   const schema = Joi.array()
     .items(
       Joi.object({
-        id: Joi.string().required(),
+        id: Joi.string()
+          .regex(/^[0-9a-fA-F-]{36}/)
+          .required(),
         name: Joi.string().required(),
-        birthday: Joi.date().iso().less('now').required()
+        birthday: Joi.alternatives().try(Joi.string().allow(''), Joi.date().iso())
       })
     )
     .min(1)

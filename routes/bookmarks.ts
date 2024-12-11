@@ -4,7 +4,8 @@ import {
   getBookmarkUrlData,
   getUserBookmarkById,
   getUserBookmarks,
-  removeUserBookmarkById
+  removeUserBookmarkById,
+  updateUserBookmarkById
 } from '@controllers/bookmarks'
 import express from 'express'
 
@@ -13,6 +14,7 @@ const router = express.Router()
 router.post('/', isAuthenticated, createUserBookmark)
 router.get('/', isAuthenticated, getUserBookmarks)
 router.get('/:bookmarkId/', isAuthenticated, getUserBookmarkById)
+router.patch('/:bookmarkId/', isAuthenticated, updateUserBookmarkById)
 router.delete('/:bookmarkId/', isAuthenticated, removeUserBookmarkById)
 router.post('/autocomplete-url-data/', isAuthenticated, getBookmarkUrlData)
 

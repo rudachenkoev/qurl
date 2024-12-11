@@ -16,8 +16,8 @@ model User {
   isActive   Boolean    @default(true)
   bookmarks  Bookmark[]
   categories Category[]
-  session    Session?
   contacts   Contact[]
+  session    Session?
 
   @@index([email])
 }
@@ -36,8 +36,8 @@ model RegistrationRequest {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @default(now()) @updatedAt
   email            String   @unique
-  password         String
   verificationCode String   @db.VarChar(6)
+  password         String
 
   @@index([email])
 }
@@ -66,44 +66,41 @@ model Category {
 }
 
 model Bookmark {
-  id              Int               @id @default(autoincrement())
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now()) @updatedAt
-  categoryId      Int
-  userId          Int
-  title           String
-  description     String?
-  url             String
-  category        Category          @relation(fields: [categoryId], references: [id])
-  user            User              @relation(fields: [userId], references: [id])
-  contacts        Contact[]         @relation("BookmarkContacts")
-  BookmarkContact BookmarkContact[]
+  id          Int                @id @default(autoincrement())
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @default(now()) @updatedAt
+  categoryId  Int
+  userId      Int
+  title       String
+  description String?
+  url         String
+  category    Category           @relation(fields: [categoryId], references: [id])
+  user        User               @relation(fields: [userId], references: [id])
+  contacts    BookmarkContacts[]
 
   @@unique([userId, url])
   @@unique([userId, title])
 }
 
 model Contact {
-  id              String            @id @default(uuid())
-  externalId      String
-  userId          Int
-  name            String
-  birthday        String
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @default(now()) @updatedAt
-  user            User              @relation(fields: [userId], references: [id])
-  bookmarks       Bookmark[]        @relation("BookmarkContacts")
-  BookmarkContact BookmarkContact[]
+  id         String             @id @default(uuid())
+  externalId String
+  userId     Int
+  name       String
+  birthday   String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @default(now()) @updatedAt
+  user       User               @relation(fields: [userId], references: [id])
+  bookmarks  BookmarkContacts[]
 
   @@unique([userId, externalId])
 }
 
-model BookmarkContact {
-  id         Int      @id @default(autoincrement())
+model BookmarkContacts {
   bookmarkId Int
   contactId  String
-  bookmark   Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
-  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  bookmark   Bookmark @relation(fields: [bookmarkId], references: [id])
+  contact    Contact  @relation(fields: [contactId], references: [id])
 
-  @@unique([bookmarkId, contactId])
+  @@id([bookmarkId, contactId])
 }

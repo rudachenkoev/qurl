@@ -13,7 +13,8 @@ const responseSerializer = {
   url: true,
   categoryId: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
+  contacts: true
 }
 
 const validateBookmark = (values: Bookmark): ValidationResult => {
@@ -21,7 +22,8 @@ const validateBookmark = (values: Bookmark): ValidationResult => {
     title: Joi.string().required(),
     description: Joi.string().optional(),
     url: Joi.string().uri().required(),
-    categoryId: Joi.number().required()
+    categoryId: Joi.number().required(),
+    contacts: Joi.array().items(Joi.string())
   })
   return schema.validate(values)
 }
@@ -37,7 +39,7 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
       return
     }
 
-    const { title, description, url, categoryId } = req.body
+    const { title, description, url, categoryId, contacts } = req.body
     // Get category information
     const category = await prisma.category.findUnique({
       where: {
@@ -59,12 +61,69 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
           connect: { id: categoryId }
         },
         user: {
-          connect: { id: category.userId }
-        }
+          connect: { id: req.userId }
+        },
+        ...(contacts.length > 0 && {
+          contacts: {
+            create: contacts.map((contactId: string) => ({ contactId }))
+          }
+        })
       },
       select: responseSerializer
     })
     res.status(201).send(newBookmark)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+}
+
+export const updateUserBookmarkById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    // Check validation
+    const { error } = validateBookmark(req.body)
+    if (error) {
+      const errors = error.details.map(item => item.message)
+      res.status(400).send(errors)
+      return
+    }
+
+    const { title, description, url, categoryId, contacts } = req.body
+
+    // Get category information
+    const category = await prisma.category.findUnique({
+      where: {
+        id: +categoryId,
+        userId: req.userId
+      }
+    })
+    if (!category) {
+      res.status(400).send('No such category was found')
+      return
+    }
+
+    // Update bookmark with new data
+    const updatedBookmark = await prisma.bookmark.update({
+      where: {
+        id: +req.params.bookmarkId
+      },
+      data: {
+        title,
+        description,
+        url,
+        category: {
+          connect: { id: categoryId }
+        },
+        ...(contacts.length > 0 && {
+          contacts: {
+            deleteMany: {},
+            create: contacts.map((contactId: string) => ({ contactId }))
+          }
+        })
+      },
+      select: responseSerializer
+    })
+
+    res.status(200).send(updatedBookmark)
   } catch (error) {
     res.status(500).send(error)
   }
