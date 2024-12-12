@@ -232,12 +232,12 @@ export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Respons
     // Get page info using puppeteer
     const { title, description } = await fetchPageInfo(req.body.url)
     // Classify title category
-    const classifiedCategory = await classifyTitleCategory(title, categories)
+    const classification = await classifyTitleCategory(title, categories)
 
     res.status(200).send({
       title: extractTitle(title) || title,
       description,
-      categoryId: classifiedCategory
+      classification
     })
   } catch (error) {
     res.status(500).send(error)
