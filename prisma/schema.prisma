@@ -99,8 +99,8 @@ model Contact {
 model BookmarkContacts {
   bookmarkId Int
   contactId  String
-  bookmark   Bookmark @relation(fields: [bookmarkId], references: [id])
-  contact    Contact  @relation(fields: [contactId], references: [id])
+  bookmark   Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@id([bookmarkId, contactId])
 }

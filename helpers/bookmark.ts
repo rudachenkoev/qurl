@@ -1,5 +1,5 @@
 import { Category } from '@prisma/client'
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import puppeteer from 'puppeteer'
 
 // Fetches the title of a web page from the given URL.
@@ -42,26 +42,55 @@ export const extractTitle = (title: string): string => {
   return parts.find(part => !isUrlPart(part) && part.length > 3) || parts[0]
 }
 
-export const classifyTitleCategory = async (title: string, categories: Partial<Category>[]): Promise<number | null> => {
-  try {
-    const labels = categories.map(({ name }) => name)
+export const classifyTitleCategory = async (
+  title: string,
+  categories: Partial<Category>[]
+): Promise<{ labels: string[]; scores: number[] }> => {
+  const models = ['facebook/bart-large-mnli', 'joeddav/xlm-roberta-large-xnli', 'valhalla/distilbart-mnli-12-1']
 
-    const { data } = await axios.post(
-      'https://api-inference.huggingface.co/models/facebook/bart-large-mnli',
-      {
-        inputs: title,
-        parameters: { candidate_labels: labels }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.HF_TOKEN}`
-        }
+  const labels = categories.map(({ name }) => name)
+
+  // Divide the categories into groups of no more than 10 each
+  const labelChunks = Array.from({ length: Math.ceil(labels.length / 10) }, (_, i) => labels.slice(i * 10, i * 10 + 10))
+
+  for (const model of models) {
+    try {
+      const results: { label: string; score: number }[] = []
+
+      for (const chunk of labelChunks) {
+        const { data } = await axios.post(
+          `https://api-inference.huggingface.co/models/${model}`,
+          {
+            inputs: title,
+            parameters: { candidate_labels: chunk }
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.HF_TOKEN}`
+            }
+          }
+        )
+
+        // Save the results of the current group
+        results.push(
+          ...data.labels.map((label: string, idx: number) => ({
+            label,
+            score: data.scores[idx]
+          }))
+        )
       }
-    )
 
-    return categories.find(({ name }) => name === data.labels[0])?.id || null
-  } catch (error) {
-    console.error('Error during title classification:', error)
-    throw new Error('Title classification failed')
+      // Sorting out the results and bringing back the top 3
+      results.sort((a, b) => b.score - a.score)
+      return {
+        labels: results.slice(0, 3).map(result => result.label),
+        scores: results.slice(0, 3).map(result => result.score)
+      }
+    } catch (error) {
+      const status = (error as AxiosError).response?.status
+      console.warn(`Model ${model} failed with status ${status}. Trying the next model.`)
+    }
   }
+
+  throw new Error('Title classification failed with all models')
 }

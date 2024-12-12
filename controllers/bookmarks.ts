@@ -22,7 +22,7 @@ const validateBookmark = (values: Bookmark): ValidationResult => {
     title: Joi.string().required(),
     description: Joi.string().optional(),
     url: Joi.string().uri().required(),
-    categoryId: Joi.number().required(),
+    categoryId: Joi.alternatives().try(Joi.string().required(), Joi.number().required()),
     contacts: Joi.array().items(Joi.string())
   })
   return schema.validate(values)
@@ -40,17 +40,32 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
     }
 
     const { title, description, url, categoryId, contacts } = req.body
-    // Get category information
-    const category = await prisma.category.findUnique({
-      where: {
-        id: +categoryId,
-        userId: req.userId
+    // Create or check exist category
+    let categoryIdToUse = categoryId
+
+    if (typeof categoryId === 'string') {
+      const newCategory = await prisma.category.create({
+        data: {
+          name: categoryId,
+          user: {
+            connect: { id: req.userId }
+          }
+        }
+      })
+      categoryIdToUse = newCategory.id
+    } else {
+      const existedCategory = await prisma.category.findUnique({
+        where: {
+          id: categoryId,
+          userId: req.userId
+        }
+      })
+      if (!existedCategory) {
+        res.status(400).send('No such category was found')
+        return
       }
-    })
-    if (!category) {
-      res.status(400).send('No such category was found')
-      return
     }
+
     // Create new bookmark
     const newBookmark = await prisma.bookmark.create({
       data: {
@@ -58,7 +73,7 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
         description,
         url,
         category: {
-          connect: { id: categoryId }
+          connect: { id: categoryIdToUse }
         },
         user: {
           connect: { id: req.userId }
@@ -71,6 +86,7 @@ export const createUserBookmark = async (req: AuthenticatedRequest, res: Respons
       },
       select: responseSerializer
     })
+
     res.status(201).send(newBookmark)
   } catch (error) {
     res.status(500).send(error)
@@ -232,12 +248,12 @@ export const getBookmarkUrlData = async (req: AuthenticatedRequest, res: Respons
     // Get page info using puppeteer
     const { title, description } = await fetchPageInfo(req.body.url)
     // Classify title category
-    const classifiedCategory = await classifyTitleCategory(title, categories)
+    const classification = await classifyTitleCategory(title, categories)
 
     res.status(200).send({
       title: extractTitle(title) || title,
       description,
-      categoryId: classifiedCategory
+      classification
     })
   } catch (error) {
     res.status(500).send(error)
