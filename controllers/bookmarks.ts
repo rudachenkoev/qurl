@@ -19,10 +19,10 @@ const responseSerializer = {
 
 const validateBookmark = (values: Bookmark): ValidationResult => {
   const schema = Joi.object({
-    title: Joi.string().required(),
-    description: Joi.string().optional(),
     url: Joi.string().uri().required(),
-    categoryId: Joi.alternatives().try(Joi.string().required(), Joi.number().required()),
+    title: Joi.string().required(),
+    description: Joi.string().allow('').optional(),
+    categoryId: Joi.alternatives().try(Joi.string(), Joi.number()).required(),
     contacts: Joi.array().items(Joi.string())
   })
   return schema.validate(values)
