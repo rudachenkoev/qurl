@@ -55,6 +55,7 @@ model PasswordRecoveryRequest {
 model Category {
   id        Int        @id @default(autoincrement())
   name      String
+  icon      String     @default("i-heroicons-question-mark-circle")
   isDefault Boolean    @default(false)
   userId    Int
   createdAt DateTime   @default(now())

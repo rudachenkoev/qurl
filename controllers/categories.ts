@@ -8,6 +8,7 @@ import Joi, { ValidationResult } from 'joi'
 const responseSerializer = {
   id: true,
   name: true,
+  icon: true,
   isDefault: true,
   createdAt: true,
   updatedAt: true
@@ -29,7 +30,8 @@ export const getUserCategories = async (req: AuthenticatedRequest, res: Response
 
 const validateCategory = (values: Category): ValidationResult => {
   const schema = Joi.object({
-    name: Joi.string().required()
+    name: Joi.string().required(),
+    icon: Joi.string().optional()
   })
   return schema.validate(values)
 }
@@ -48,6 +50,7 @@ export const createUserCategory = async (req: AuthenticatedRequest, res: Respons
     const newCategory = await prisma.category.create({
       data: {
         name: req.body.name,
+        icon: req.body.icon,
         user: {
           connect: { id: req.userId }
         }
