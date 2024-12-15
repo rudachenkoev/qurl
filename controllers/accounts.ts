@@ -9,7 +9,9 @@ const responseSerializer = {
   email: true,
   isActive: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
+  contactsSyncAt: true,
+  calendarSyncAt: true
 }
 // Retrieves the current authenticated user.
 export const getCurrentUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -63,7 +65,7 @@ const validateUserContacts = (values: Contact[]): ValidationResult => {
   return schema.validate(values)
 }
 
-// Upsert contacts for the authenticated user.
+// Synchronize contacts for the authenticated user.
 export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   // Check validation
   const { error } = validateUserContacts(req.body)
@@ -98,6 +100,16 @@ export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: 
     })
 
     await prisma.$transaction(transaction)
+
+    await prisma.user.update({
+      where: {
+        id: req.userId
+      },
+      data: {
+        contactsSyncAt: new Date().toISOString()
+      }
+    })
+
     res.status(200)
   } catch (error) {
     console.log('error', error)
