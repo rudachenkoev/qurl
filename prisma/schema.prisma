@@ -8,16 +8,17 @@ datasource db {
 }
 
 model User {
-  id         Int        @id @default(autoincrement())
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @default(now()) @updatedAt
-  email      String     @unique
-  password   String
-  isActive   Boolean    @default(true)
-  bookmarks  Bookmark[]
-  categories Category[]
-  contacts   Contact[]
-  session    Session?
+  id             Int        @id @default(autoincrement())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @default(now()) @updatedAt
+  email          String     @unique
+  password       String
+  isActive       Boolean    @default(true)
+  bookmarks      Bookmark[]
+  categories     Category[]
+  contacts       Contact[]
+  session        Session?
+  contactsSyncAt DateTime?
 
   @@index([email])
 }
@@ -95,6 +96,7 @@ model Contact {
   bookmarks  BookmarkContacts[]
 
   @@unique([userId, externalId])
+  @@index([externalId])
 }
 
 model BookmarkContacts {
