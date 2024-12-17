@@ -11,7 +11,6 @@ const responseSerializer = {
   createdAt: true,
   updatedAt: true,
   contactsSyncAt: true,
-  calendarSyncAt: true
 }
 // Retrieves the current authenticated user.
 export const getCurrentUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
