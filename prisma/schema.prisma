@@ -19,7 +19,6 @@ model User {
   contacts       Contact[]
   session        Session?
   contactsSyncAt DateTime?
-  calendarSyncAt DateTime?
 
   @@index([email])
 }
@@ -97,6 +96,7 @@ model Contact {
   bookmarks  BookmarkContacts[]
 
   @@unique([userId, externalId])
+  @@index([externalId])
 }
 
 model BookmarkContacts {

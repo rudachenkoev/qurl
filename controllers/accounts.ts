@@ -93,7 +93,7 @@ export const upsertCurrentUserContacts = async (req: AuthenticatedRequest, res: 
           birthday: contact.birthday,
           name: contact.name,
           user: {
-            connect: { id: req.userId! }
+            connect: { id: req.userId }
           }
         }
       })
